@@ -1,0 +1,93 @@
+{
+  "name": "@shieldx/core",
+  "version": "0.3.0",
+  "description": "Self-evolving LLM prompt injection defense — 10-layer detection, kill chain mapping, self-healing, self-learning",
+  "author": "Context X <opensource@context-x.org>",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./nextjs": {
+      "import": "./dist/integrations/nextjs/index.mjs",
+      "require": "./dist/integrations/nextjs/index.js",
+      "types": "./dist/integrations/nextjs/index.d.ts"
+    },
+    "./ollama": {
+      "import": "./dist/integrations/ollama/index.mjs",
+      "require": "./dist/integrations/ollama/index.js",
+      "types": "./dist/integrations/ollama/index.d.ts"
+    },
+    "./anthropic": {
+      "import": "./dist/integrations/anthropic/index.mjs",
+      "require": "./dist/integrations/anthropic/index.js",
+      "types": "./dist/integrations/anthropic/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
+    "test:run": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/",
+    "db:migrate": "tsx scripts/setup-db.ts",
+    "db:seed": "tsx scripts/seed-patterns.ts",
+    "benchmark": "tsx scripts/benchmark.ts",
+    "self-test": "tsx scripts/self-test.ts"
+  },
+  "dependencies": {
+    "pg": "^8.13.0",
+    "pgvector": "^0.2.0",
+    "zod": "^3.24.0",
+    "pino": "^9.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsup": "^8.3.0",
+    "tsx": "^4.19.0",
+    "vitest": "^3.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "@types/pg": "^8.11.0",
+    "@types/node": "^22.0.0",
+    "eslint": "^9.0.0"
+  },
+  "peerDependencies": {
+    "next": ">=15.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://gitea.context-x.org/rene/shieldx.git"
+  },
+  "keywords": [
+    "llm",
+    "security",
+    "prompt-injection",
+    "defense",
+    "guardrails",
+    "claude",
+    "ollama",
+    "self-healing",
+    "kill-chain",
+    "mcp-security"
+  ]
+}

@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: shieldx-postgres
+    environment:
+      POSTGRES_DB: shieldx
+      POSTGRES_USER: shieldx
+      POSTGRES_PASSWORD: shieldx_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - shieldx-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shieldx -d shieldx"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: shieldx-chroma
+    ports:
+      - "8000:8000"
+    volumes:
+      - shieldx-chroma-data:/chroma/chroma
+    profiles: ["chroma"]
+
+volumes:
+  shieldx-postgres-data:
+  shieldx-chroma-data:

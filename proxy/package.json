@@ -1,0 +1,13 @@
+{
+  "name": "@shieldx/ollama-proxy",
+  "version": "0.1.0",
+  "description": "ShieldX protection proxy for Ollama — scans every prompt for injection attacks",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {},
+  "license": "Apache-2.0"
+}
