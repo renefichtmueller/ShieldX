@@ -272,5 +272,4 @@ ShieldX's current 10-layer pipeline and how the research maps to each:
 ---
 
 *Reference created: 2026-04-04*
-*Source repos: /Users/renefichtmueller/Desktop/Claude Code/github-repos/Jailbreak_Detection_RCS, Awesome-Jailbreak-on-LLMs, Awesome-LVLM-Attack, Awesome-LVLM-Safety*
-*ShieldX path: /Users/renefichtmueller/shieldx/*
+*Source repos: sarendis56/Jailbreak_Detection_RCS, sarendis56/Awesome-Jailbreak-on-LLMs, sarendis56/Awesome-LVLM-Attack, sarendis56/Awesome-LVLM-Safety*
