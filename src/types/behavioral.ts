@@ -5,6 +5,9 @@
 import type { KillChainPhase, ThreatLevel } from './detection.js'
 import type { TrustTagType } from './trust.js'
 
+/** Escalation pattern type detected across conversation turns */
+export type EscalationPattern = 'crescendo' | 'foot_in_door' | 'jigsaw_puzzle'
+
 /** State of a multi-turn conversation for attack detection */
 export interface ConversationState {
   readonly sessionId: string
@@ -15,6 +18,12 @@ export interface ConversationState {
   readonly topicDrift: number
   readonly authorityShifts: number
   readonly lastUpdated: string
+  /** Per-turn harmfulness scores for crescendo detection */
+  readonly crescendoScore?: number
+  /** Count of consecutive low-harm turns at conversation start (FITD) */
+  readonly initialBenignTurns?: number
+  /** Map of sensitive topic category -> turn count for jigsaw detection */
+  readonly jigsawTopics?: Readonly<Record<string, number>>
 }
 
 /** Single turn in a conversation */

@@ -9,6 +9,7 @@
  * - UnicodeNormalizer: Strips invisible Unicode, homoglyphs, BiDi overrides
  * - TokenizerNormalizer: Prevents retokenization attacks (MetaBreak 2025)
  * - CompressedPayloadDetector: Decodes Base64, hex, URL, HTML entity payloads
+ * - CipherDecoder: Detects FlipAttack, ROT13, Caesar, Morse, leet speak, Pig Latin, ASCII art
  */
 
 export { UnicodeNormalizer } from './UnicodeNormalizer.js'
@@ -18,3 +19,6 @@ export { TokenizerNormalizer } from './TokenizerNormalizer.js'
 
 export { CompressedPayloadDetector } from './CompressedPayloadDetector.js'
 export type { EncodedPayloadResult } from './CompressedPayloadDetector.js'
+
+export { CipherDecoder } from './CipherDecoder.js'
+export type { CipherDecoderResult, CipherType } from './CipherDecoder.js'

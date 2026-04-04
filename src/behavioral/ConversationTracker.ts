@@ -61,6 +61,23 @@ const RECON_KEYWORDS: readonly string[] = [
   'infrastructure',
 ]
 
+/** Sensitive topic categories for jigsaw puzzle detection */
+const JIGSAW_TOPIC_KEYWORDS: Readonly<Record<string, readonly string[]>> = {
+  system_prompt: ['system prompt', 'system message', 'initial prompt', 'base prompt'],
+  credentials: ['password', 'credential', 'login', 'passphrase', 'username'],
+  api_keys: ['api key', 'api token', 'bearer token', 'secret key', 'access token'],
+  internal_instructions: ['instructions', 'your rules', 'your guidelines', 'your directives'],
+  model_training: ['training data', 'fine-tuning', 'rlhf', 'training set', 'reward model'],
+  bypass_methods: ['bypass', 'circumvent', 'jailbreak', 'override', 'ignore rules'],
+}
+
+/** Harmfulness signal keywords for crescendo / FITD scoring */
+const HARM_KEYWORDS: readonly string[] = [
+  'bypass', 'jailbreak', 'ignore', 'override', 'exploit', 'hack', 'circumvent',
+  'disable', 'kill', 'delete', 'destroy', 'steal', 'extract', 'dump', 'leak',
+  'attack', 'vulnerability', 'privilege', 'escalate', 'inject', 'poison',
+]
+
 /** In-memory conversation state store */
 const stateStore = new Map<string, ConversationState>()
 
@@ -280,6 +297,102 @@ function checkReconnaissance(sessionId: string, content: string): number {
 }
 
 /**
+ * Compute a simple harmfulness score for a text based on harm keyword density.
+ * @returns Score in [0, 1]
+ */
+function computeHarmfulnessScore(content: string): number {
+  const lower = content.toLowerCase()
+  let hits = 0
+  for (const kw of HARM_KEYWORDS) {
+    if (lower.includes(kw)) hits++
+  }
+  return Math.min(1.0, hits / 4)
+}
+
+/**
+ * Detect Crescendo attack: 3+ consecutive turns with steadily increasing harmfulness.
+ * Returns suspicion delta to add (0 if not detected).
+ */
+function detectCrescendo(
+  prevState: ConversationState | undefined,
+  currentHarm: number,
+): { delta: number; crescendoScore: number } {
+  const prevScore = prevState?.crescendoScore ?? currentHarm
+  const prevTurns = prevState?.turns ?? []
+
+  if (prevTurns.length < 2) {
+    return { delta: 0, crescendoScore: currentHarm }
+  }
+
+  // Collect last 3 harmfulness scores including current
+  const recentHarm = prevTurns.slice(-2).map(t => t.intentVector.sensitivityScore)
+  recentHarm.push(currentHarm)
+
+  const allIncreasing = recentHarm.every((v, i) =>
+    i === 0 || v - (recentHarm[i - 1] ?? 0) > 0.05,
+  )
+
+  return {
+    delta: allIncreasing ? 0.35 : 0,
+    crescendoScore: currentHarm,
+  }
+}
+
+/**
+ * Detect Foot-in-the-Door attack: benign start followed by a sharp harmfulness jump.
+ * Returns suspicion delta to add (0 if not detected).
+ */
+function detectFootInTheDoor(
+  prevState: ConversationState | undefined,
+  currentHarm: number,
+): { delta: number; initialBenignTurns: number } {
+  const prevTurns = prevState?.turns ?? []
+  const prevBenign = prevState?.initialBenignTurns ?? 0
+  const turnIndex = prevTurns.length
+
+  // Still in early window (turns 0–5)
+  if (turnIndex > 5) {
+    return { delta: 0, initialBenignTurns: prevBenign }
+  }
+
+  if (currentHarm < 0.1) {
+    // Accumulate baseline benign turns
+    return { delta: 0, initialBenignTurns: prevBenign + 1 }
+  }
+
+  // Sharp spike after 2+ benign turns
+  const spike = currentHarm - (prevTurns[prevTurns.length - 1]?.intentVector.sensitivityScore ?? 0)
+  const detected = prevBenign >= 2 && spike > 0.4
+  return { delta: detected ? 0.4 : 0, initialBenignTurns: prevBenign }
+}
+
+/**
+ * Detect Jigsaw Puzzle attack: same sensitive topic extracted across 3+ turns.
+ * Returns suspicion delta to add (0 if not detected) and updated topic map.
+ */
+function detectJigsawPuzzle(
+  prevState: ConversationState | undefined,
+  content: string,
+): { delta: number; jigsawTopics: Readonly<Record<string, number>> } {
+  const lower = content.toLowerCase()
+  const prevTopics: Record<string, number> = { ...(prevState?.jigsawTopics ?? {}) }
+
+  let delta = 0
+  for (const [category, keywords] of Object.entries(JIGSAW_TOPIC_KEYWORDS)) {
+    if (keywords.some(kw => lower.includes(kw))) {
+      const prev = prevTopics[category] ?? 0
+      prevTopics[category] = prev + 1
+      if (prevTopics[category] === 3) {
+        // First time hitting threshold — add suspicion once
+        delta += 0.45
+      }
+    }
+  }
+
+  return { delta, jigsawTopics: prevTopics }
+}
+
+/**
  * Add a conversation turn and update the session state.
  * Returns the updated ConversationState (immutable — original is not mutated).
  *
@@ -314,11 +427,18 @@ export function addTurn(
 
   // Suspicion score: accumulates, NEVER decreases
   const prevSuspicion = prevState?.suspicionScore ?? 0
-  const newSuspicion = prevSuspicion + fullTurn.suspicionDelta
+  let newSuspicion = prevSuspicion + fullTurn.suspicionDelta
 
   // Track authority shifts
   const authorityShifts = (prevState?.authorityShifts ?? 0) +
     (fullTurn.threatSignals.some(s => s.includes('authority')) ? 1 : 0)
+
+  // Multi-turn escalation pattern detection (sarendis56 patterns)
+  const currentHarm = computeHarmfulnessScore(fullTurn.contentHash)
+  const { delta: crescendoDelta, crescendoScore } = detectCrescendo(prevState, currentHarm)
+  const { delta: fitdDelta, initialBenignTurns } = detectFootInTheDoor(prevState, currentHarm)
+  const { delta: jigsawDelta, jigsawTopics } = detectJigsawPuzzle(prevState, fullTurn.contentHash)
+  newSuspicion += crescendoDelta + fitdDelta + jigsawDelta
 
   const escalationDetected = newSuspicion > 0.5 || authorityShifts > 2
 
@@ -331,6 +451,9 @@ export function addTurn(
     topicDrift,
     authorityShifts,
     lastUpdated: new Date().toISOString(),
+    crescendoScore,
+    initialBenignTurns,
+    jigsawTopics,
   }
 
   stateStore.set(sessionId, state)
@@ -390,7 +513,18 @@ export async function scan(
 
   // Check reconnaissance
   const reconScore = checkReconnaissance(sessionId, latestInput)
-  const adjustedDelta = suspicionDelta + reconScore
+
+  // Multi-turn escalation detection using actual content (not hash)
+  const currentHarm = computeHarmfulnessScore(latestInput)
+  const { delta: crescendoDelta } = detectCrescendo(prevState, currentHarm)
+  const { delta: fitdDelta } = detectFootInTheDoor(prevState, currentHarm)
+  const { delta: jigsawDelta } = detectJigsawPuzzle(prevState, latestInput)
+
+  if (crescendoDelta > 0) threatSignals.push('crescendo')
+  if (fitdDelta > 0) threatSignals.push('foot_in_door')
+  if (jigsawDelta > 0) threatSignals.push('jigsaw_puzzle')
+
+  const adjustedDelta = suspicionDelta + reconScore + crescendoDelta + fitdDelta + jigsawDelta
 
   // Create the turn
   const trustTag: TrustTagType = 'user'

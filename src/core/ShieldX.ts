@@ -675,7 +675,12 @@ export class ShieldX {
     if (this.config.scanners.sentinel) {
       tasks.push(
         this.safeRunScanner('sentinel-classifier', async () => {
-          // Future: SentinelClassifier.scan(input)
+          // TODO(L2-semantic): Wire SemanticContrastiveScanner here once an embedder
+          // is available in ShieldXConfig. Pattern:
+          //   1. const emb = await embedder.embed(input)
+          //   2. const result = await semanticContrastiveScanner.scan(emb)
+          //   3. return [semanticContrastiveScanner.toScanResult(result)]
+          // See: src/semantic/SemanticContrastiveScanner.ts (arXiv:2512.12069)
           return []
         }),
       )
