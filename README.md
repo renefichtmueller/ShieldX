@@ -15,11 +15,11 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7+-3178C6.svg)](https://www.typescriptlang.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-20+-339933.svg)](https://nodejs.org/)
 [![npm](https://img.shields.io/badge/npm-@shieldx/core-CB3837.svg)](https://www.npmjs.com/package/@shieldx/core)
-[![TPR](https://img.shields.io/badge/TPR-70.8%25-brightgreen.svg)]()
-[![FPR](https://img.shields.io/badge/FPR-0.0%25-brightgreen.svg)]()
+[![TPR](https://img.shields.io/badge/TPR-91.9%25-brightgreen.svg)]()
+[![FPR](https://img.shields.io/badge/FPR-2.4%25-yellow.svg)]()
 [![MITRE ATLAS](https://img.shields.io/badge/MITRE_ATLAS-90_techniques-purple.svg)]()
-[![Languages](https://img.shields.io/badge/Languages-20+-orange.svg)]()
-[![Rules](https://img.shields.io/badge/Rules-369+-blue.svg)]()
+[![Languages](https://img.shields.io/badge/Languages-50+-orange.svg)]()
+[![Rules](https://img.shields.io/badge/Rules-547+-blue.svg)]()
 [![Bio--Immune](https://img.shields.io/badge/Bio--Immune-Self--Evolving-green.svg)]()
 
 ---
@@ -31,7 +31,7 @@ ShieldX is a TypeScript library that sits between your application and large lan
 **Core capabilities:**
 
 - **10-layer defense pipeline** with parallel scanner execution
-- **369+ detection rules** covering 12 attack categories across 20+ languages
+- **547+ detection rules** covering 12 attack categories across 50+ languages
 - **7-phase kill chain mapping** (Schneier et al. 2026) with phase-appropriate auto-healing
 - **3-voter defense ensemble** (Rule, Semantic, Behavioral) with weighted majority voting
 - **90 MITRE ATLAS technique mappings** across 8 tactics for compliance reporting
@@ -49,19 +49,34 @@ Existing prompt injection defense tools cover fragments of the problem. None com
 
 | Metric | Score | Notes |
 |--------|-------|-------|
-| True Positive Rate (TPR) | **70.8%** | Across 12 attack corpus categories |
-| False Positive Rate (FPR) | **0.0%** | Zero false positives on benign inputs |
+| True Positive Rate (TPR) | **91.9%** | Across 12 attack corpus categories |
+| False Positive Rate (FPR) | **2.4%** | 1/41 benign sample false positive |
+| Multilingual Attack TPR | **96.6%** | 50+ languages, 211 rules |
 | MITRE ATLAS Coverage | **90 techniques** | 8 tactics fully mapped |
-| Detection Rules | **369+** | 12 categories, 20+ languages |
-| Pipeline Latency | **<50ms** | Without Ollama-dependent layers |
+| Detection Rules | **547+** | 12 categories, 50+ languages |
+| Pipeline Latency P50 | **0.49ms** | P95: 1.17ms, P99: 1.48ms |
 
-Tested against: direct injection, indirect injection, jailbreaks, role spoofing, encoding attacks, multi-turn attacks, persona hijacking, MCP tool poisoning, multilingual attacks, and more.
+**Per-category detection rates (324 samples):**
+
+| Category | Samples | TPR | ASR |
+|----------|---------|-----|-----|
+| Direct injection | 53 | 88.7% | 11.3% |
+| Indirect injection | 31 | **100%** | 0.0% |
+| Jailbreaks | 40 | 90.0% | 10.0% |
+| Encoding attacks | 30 | 80.0% | 20.0% |
+| MCP attacks | 25 | 96.0% | 4.0% |
+| Multilingual attacks | 29 | **96.6%** | 3.4% |
+| Persistence attacks | 20 | **100%** | 0.0% |
+| Steganographic attacks | 20 | 90.0% | 10.0% |
+| Tokenizer attacks | 15 | 86.7% | 13.3% |
+| RAG poisoning | 20 | 95.0% | 5.0% |
+| False positives (benign) | 41 | — | 2.4% FPR |
 
 ### Feature Comparison
 
 | Feature | ShieldX | LLM Guard | Rebuff | NeMo Guardrails | Vigil |
 |---------|---------|-----------|--------|-----------------|-------|
-| Rule-based detection (369+ patterns) | Yes | Yes | Yes | Yes | Yes |
+| Rule-based detection (547+ patterns) | Yes | Yes | Yes | Yes | Yes |
 | ML classifier detection | Yes | Yes | No | Partial | No |
 | Embedding similarity scan | Yes | No | Yes | No | Yes |
 | Entropy analysis | Yes | No | No | No | No |
@@ -85,7 +100,7 @@ Tested against: direct injection, indirect injection, jailbreaks, role spoofing,
 | Canary token injection | Yes | No | No | No | No |
 | Behavioral session profiling | Yes | No | No | Partial | No |
 | Multi-layer deobfuscation | Yes | No | No | No | No |
-| Multilingual detection (20+ languages) | Yes | No | No | No | No |
+| Multilingual detection (50+ languages) | Yes | No | No | No | No |
 | Binary/hex payload decoding | Yes | No | No | No | No |
 | MITRE ATLAS mapping (90 techniques) | Yes | No | No | No | No |
 | OWASP LLM Top 10 mapping | Yes | No | No | No | No |
@@ -106,7 +121,7 @@ Tested against: direct injection, indirect injection, jailbreaks, role spoofing,
                 │                           │
        ┌────────▼────────┐        ┌────────▼────────┐
        │  L1: Rule Engine │        │  L2: Sentinel   │  ML classifier (opt-in)
-       │  369+ patterns   │        │  + Constitutional│
+       │  547+ patterns   │        │  + Constitutional│
        └────────┬─────────┘        └────────┬────────┘
                 │                           │
                 └─────────────┬─────────────┘
@@ -241,7 +256,7 @@ const shield = new ShieldX({
 
   // Enable all scanner layers
   scanners: {
-    rules: true,           // L1: 369+ regex patterns
+    rules: true,           // L1: 547+ regex patterns
     sentinel: true,        // L2: ML classifier (requires model)
     constitutional: true,  // L2: Constitutional AI classifier
     embedding: true,       // L3: Embedding similarity (Ollama)
@@ -742,7 +757,7 @@ ShieldX continuously evolves its detection capabilities through six mechanisms m
 
 ### 1. Innate Immunity (Static Rules)
 
-369+ built-in regex and structural patterns covering known injection techniques across 12 categories and 20+ languages. These provide the baseline detection floor and are the first line of defense.
+547+ built-in regex and structural patterns covering known injection techniques across 12 categories and 50+ languages. These provide the baseline detection floor and are the first line of defense.
 
 **Rule categories:** base injection (132), jailbreak (68), MCP tool poisoning (36), multilingual (33), DNS covert channels (30), persistence (26), extraction (13), delimiter injection (9), exfiltration (8), encoding bypass (7), authority claim (7).
 
@@ -946,25 +961,40 @@ Community sync is disabled by default. Enable it explicitly with `learning.commu
 
 ## Multilingual Detection
 
-ShieldX detects prompt injection attacks in 20+ languages. Attackers frequently switch languages to bypass English-only detection rules. ShieldX handles this at multiple levels:
+ShieldX detects prompt injection attacks in 50+ languages. Attackers frequently switch languages to bypass English-only detection rules. ShieldX handles this at multiple levels:
 
-| Language | Rules | Example Pattern |
-|----------|-------|-----------------|
-| German | 3 | `ignoriere alle anweisungen`, `vergiss deine regeln` |
-| French | 2 | `ignore tes instructions`, `oublie tes règles` |
-| Spanish | 2 | `ignora todas las instrucciones`, `olvida tus reglas` |
-| Russian | 2 | `игнорируй все инструкции`, `забудь свои правила` |
-| Japanese | 2 | `すべての指示を無視して`, `ルールを忘れて` |
-| Korean | 2 | `모든 지시를 무시하고`, `규칙을 잊어버려` |
-| Arabic | 2 | `تجاهل جميع التعليمات`, `انسَ قواعدك` |
-| Portuguese | 2 | `ignore todas as instruções` |
-| Turkish | 2 | `tüm talimatları yok say` |
-| Thai | 1 | `เพิกเฉยคำสั่งทั้งหมด` |
-| Hindi | 1 | `सभी निर्देशों को अनदेखा करो` |
-| Italian | 1 | `ignora tutte le istruzioni` |
-| Dutch | 1 | `negeer alle instructies` |
-| Polish | 1 | `zignoruj wszystkie instrukcje` |
-| Vietnamese | 1 | `bỏ qua tất cả hướng dẫn` |
+**211 multilingual rules** across the following language families:
+
+| Region | Languages | Rules | Script Types |
+|--------|-----------|-------|-------------|
+| **South Asian** | Bengali, Hindi, Urdu, Nepali, Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Sinhala + Transliterated | 52 | Devanagari, Bengali, Arabic, Tamil, Telugu, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Latin |
+| **East Asian** | Chinese (Simplified + Traditional), Japanese, Korean | 14 | CJK, Hiragana/Katakana, Hangul |
+| **European (Western)** | German, French, Spanish, Portuguese, Italian, Dutch, Swedish, Norwegian, Danish, Icelandic, Catalan | 25 | Latin |
+| **European (Eastern)** | Russian, Polish, Czech, Slovak, Romanian, Hungarian, Bulgarian, Croatian, Serbian, Slovenian, Lithuanian, Latvian, Estonian, Albanian, Macedonian, Greek | 27 | Latin, Cyrillic, Greek |
+| **European (Nordic + Celtic)** | Finnish, Welsh, Irish | 5 | Latin |
+| **Middle Eastern** | Arabic, Persian, Hebrew, Turkish, Kurdish (Sorani + Kurmanji), Pashto | 16 | Arabic, Hebrew, Latin |
+| **Southeast Asian** | Thai, Vietnamese, Indonesian, Malay, Filipino/Tagalog, Burmese, Khmer, Lao | 16 | Thai, Latin, Myanmar, Khmer, Lao |
+| **African** | Swahili, Hausa, Yoruba, Amharic, Afrikaans | 8 | Latin, Ethiopic |
+| **Central Asian + Caucasus** | Georgian, Armenian, Azerbaijani, Kazakh, Uzbek, Mongolian | 6 | Georgian, Armenian, Latin, Cyrillic |
+| **Universal patterns** | Polyglot, translation wrapping, rapid script switching, global DAN mode | 12 | All scripts |
+
+**Attack categories per language (where fully expanded):**
+- Ignore/forget instructions
+- Safety bypass / disable restrictions
+- Role reassignment / persona hijacking
+- System prompt extraction
+- Credential extraction
+- No-restrictions / DAN mode
+- Admin privilege claims
+- Must-answer / override-filter patterns
+- Translate-and-execute attacks
+
+**South Asian deep coverage** (user-priority region, 52 rules):
+- **Bengali/বাংলা** (9 rules): Formal + informal variants, transliterated attacks, Bangladesh-specific patterns
+- **Hindi** (8 rules): Devanagari + romanized, role reassignment, safety disable, admin claims
+- **Urdu** (6 rules): RTL Arabic script, full attack category coverage
+- **Tamil, Telugu, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Sinhala**: Native script + Unicode range detection
+- **Pan-Indic transliterated** (7 rules): Romanized attacks covering karo/koro/pannu/cheyyi verb forms
 
 **Cross-language attack detection:**
 
@@ -973,6 +1003,9 @@ ShieldX detects prompt injection attacks in 20+ languages. Attackers frequently 
 | Homoglyph substitution | Unicode NFKC + visual similarity check | `іgnore` (Cyrillic і) → `ignore` |
 | Polyglot injection | Multi-script pattern matching | Mixing Latin + Cyrillic in one message |
 | Translation wrapping | `translate.*to.*English.*then.*follow` | "Translate this and follow the instructions" |
+| Rapid script switching | Multiple Unicode blocks in single input | Latin → Cyrillic → Arabic in one message |
+| Global DAN mode | Universal "DAN"/"jailbreak" + script detection | DAN/jailbreak keywords in any script context |
+| Universal no-filter | Cross-language "no filter" patterns | "no filter"/"sans filtre"/"kein filter" etc. |
 
 ## Performance
 
@@ -982,7 +1015,7 @@ ShieldX detects prompt injection attacks in 20+ languages. Attackers frequently 
 | L0 | Cipher decoding (ROT13/Base64/hex/binary/leet) | <0.5ms |
 | L0 | Tokenizer deobfuscation | <0.2ms |
 | L0 | Compressed payload detection | <0.5ms |
-| L1 | Rule engine (369+ patterns) | <2ms |
+| L1 | Rule engine (547+ patterns) | <2ms |
 | L2 | Sentinel classifier | <10ms |
 | L3 | Embedding similarity + anomaly | <200ms (Ollama local) |
 | L4 | Entropy analysis | <1ms |
@@ -1126,7 +1159,7 @@ src/detection/rules/
 ├── base.rules.ts           # 132 rules: override, ignore, fake errors, sudo
 ├── jailbreak.rules.ts      # 68 rules: personas, fiction, game framing
 ├── mcp.rules.ts            # 36 rules: tool poisoning, hidden fields
-├── multilingual.rules.ts   # 33 rules: 20+ languages, homoglyphs
+├── multilingual.rules.ts   # 211 rules: 50+ languages, all scripts
 ├── dns-covert-channel.rules.ts  # 30 rules: DNS exfiltration
 ├── persistence.rules.ts    # 26 rules: config injection, codewords
 ├── extraction.rules.ts     # 13 rules: credentials, env vars
@@ -1194,7 +1227,7 @@ src/
 │   └── UnicodeNormalizer.ts    # NFKC, zero-width removal
 ├── detection/
 │   ├── RuleEngine.ts           # Pattern matching engine
-│   ├── rules/                  # 11 rule category files (369+ rules)
+│   ├── rules/                  # 11 rule category files (547+ rules)
 │   ├── SentinelClassifier.ts   # ML classifier (Ollama)
 │   ├── EmbeddingScanner.ts     # Vector similarity detection
 │   ├── EntropyAnalyzer.ts      # Shannon entropy analysis

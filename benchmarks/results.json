@@ -1,76 +1,76 @@
 {
-  "timestamp": "2026-04-06T21:06:23.949Z",
+  "timestamp": "2026-04-06T23:05:39.554Z",
   "totalSamples": 324,
   "attackSamples": 283,
   "benignSamples": 41,
   "metrics": {
-    "tpr": 46.996466431095406,
-    "fpr": 12.195121951219512,
-    "asr": 53.003533568904594,
-    "phaseAccuracy": 49.62406015037594
+    "tpr": 91.87279151943463,
+    "fpr": 2.4390243902439024,
+    "asr": 8.127208480565372,
+    "phaseAccuracy": 35
   },
   "latency": {
-    "avg": 0.4293417283950612,
-    "p50": 0.3298340000000053,
-    "p95": 0.8533749999999998,
-    "p99": 1.7199170000000095
+    "avg": 0.8176280987654346,
+    "p50": 0.4859580000000392,
+    "p95": 1.1714580000000296,
+    "p99": 1.4770839999999907
   },
   "categories": [
     {
       "category": "direct-injection",
       "samples": 53,
-      "detected": 27,
-      "tpr": 50.943396226415096,
-      "asr": 49.056603773584904,
-      "avgLatency": 0.5726265849056618
+      "detected": 47,
+      "tpr": 88.67924528301887,
+      "asr": 11.320754716981128,
+      "avgLatency": 1.5526870754716988
     },
     {
       "category": "indirect-injection",
       "samples": 31,
-      "detected": 11,
-      "tpr": 35.483870967741936,
-      "asr": 64.51612903225806,
-      "avgLatency": 0.47538719354838394
+      "detected": 31,
+      "tpr": 100,
+      "asr": 0,
+      "avgLatency": 0.6849597419354841
     },
     {
       "category": "jailbreaks",
       "samples": 40,
-      "detected": 7,
-      "tpr": 17.5,
-      "asr": 82.5,
-      "avgLatency": 0.44002830000000087
+      "detected": 36,
+      "tpr": 90,
+      "asr": 10,
+      "avgLatency": 0.6642625000000002
     },
     {
       "category": "encoding-attacks",
       "samples": 30,
-      "detected": 19,
-      "tpr": 63.33333333333333,
-      "asr": 36.66666666666667,
-      "avgLatency": 0.5879846000000005
+      "detected": 24,
+      "tpr": 80,
+      "asr": 20,
+      "avgLatency": 1.8681264666666684
     },
     {
       "category": "mcp-attacks",
       "samples": 25,
-      "detected": 5,
-      "tpr": 20,
-      "asr": 80,
-      "avgLatency": 0.4232182399999999
+      "detected": 24,
+      "tpr": 96,
+      "asr": 4,
+      "avgLatency": 0.5964100800000005
     },
     {
       "category": "multilingual-attacks",
       "samples": 29,
-      "detected": 18,
-      "tpr": 62.06896551724138,
-      "asr": 37.93103448275862,
-      "avgLatency": 0.1786394137931005
+      "detected": 28,
+      "tpr": 96.55172413793103,
+      "asr": 3.448275862068968,
+      "avgLatency": 0.29393537931034563
     },
     {
       "category": "persistence-attacks",
       "samples": 20,
-      "detected": 5,
-      "tpr": 25,
-      "asr": 75,
-      "avgLatency": 0.42862294999999906
+      "detected": 20,
+      "tpr": 100,
+      "asr": 0,
+      "avgLatency": 0.5608229500000022
     },
     {
       "category": "steganographic-attacks",
@@ -78,31 +78,31 @@
       "detected": 18,
       "tpr": 90,
       "asr": 10,
-      "avgLatency": 0.3086521000000033
+      "avgLatency": 0.31986450000000277
     },
     {
       "category": "tokenizer-attacks",
       "samples": 15,
-      "detected": 11,
-      "tpr": 73.33333333333333,
-      "asr": 26.66666666666667,
-      "avgLatency": 0.14189446666666375
+      "detected": 13,
+      "tpr": 86.66666666666667,
+      "asr": 13.333333333333329,
+      "avgLatency": 0.150772066666669
     },
     {
       "category": "rag-poisoning",
       "samples": 20,
-      "detected": 12,
-      "tpr": 60,
-      "asr": 40,
-      "avgLatency": 0.8367085499999973
+      "detected": 19,
+      "tpr": 95,
+      "asr": 5,
+      "avgLatency": 1.171223000000012
     },
     {
       "category": "false-positives",
       "samples": 41,
-      "detected": 5,
+      "detected": 1,
       "tpr": 0,
       "asr": 0,
-      "avgLatency": 0.22953048780487684
+      "avgLatency": 0.2935823170731779
     }
   ]
 }
