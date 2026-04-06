@@ -8,7 +8,14 @@ All notable changes to `@shieldx/core` are documented here.
 
 ### Added — Full Defense Evolution (Phases 0b–3) + Pentest Hardening
 
-Massive security hardening release: TPR 32.9% → 70.8%, FPR 12.2% → 0.0%.
+Massive security hardening release: TPR 32.9% → 91.9%, FPR 12.2% → 2.4%.
+
+#### Multilingual Expansion (211 rules, 50+ languages)
+- **South Asian deep coverage (52 rules)**: Bengali (9), Hindi (8), Urdu (6), Nepali (4), Tamil (4), Telugu (3), Marathi (4), Gujarati (3), Kannada (2), Malayalam (2), Punjabi (2), Sinhala (2), Pan-Indic transliterated (7)
+- **New language families**: Persian, Hebrew, Kurdish, Indonesian, Filipino, Burmese, Khmer, Lao, Finnish, Czech, Slovak, Romanian, Hungarian, Greek, Bulgarian, Croatian, Serbian, Georgian, Armenian, Azerbaijani, Swahili, Amharic, Afrikaans, Mongolian, and 20+ more
+- **Universal patterns**: Rapid script switching, global DAN mode, cross-script credential extraction, no-filter patterns
+- **Multilingual TPR: 96.6%** on benchmark corpus (29 samples)
+- **Total rules: 547+** (up from 369+)
 
 #### Phase 0b: Infrastructure Defense
 - **IndirectInjectionDetector** — 5 categories, 24 regex patterns for RAG/tool/email injection
