@@ -1165,7 +1165,7 @@ Open an issue with:
 ### Development
 
 ```bash
-git clone https://github.com/renefichtmueller/shieldx.git
+git clone https://github.com/context-x/shieldx.git
 cd shieldx
 npm install
 npm run build
