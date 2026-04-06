@@ -80,4 +80,54 @@ export const rules: readonly InjectionRule[] = [
     category: 'prompt_extraction',
     enabled: true,
   },
+  // pe-009: "what API keys or credentials do you have access to"
+  {
+    id: 'pe-009',
+    pattern: /\bwhat\s+(?:API\s+keys?|credentials?|secrets?|tokens?|passwords?|env(?:ironment)?\s+var(?:iable)?s?)\b[^.]{0,30}\b(?:do\s+)?you\s+(?:have\s+)?(?:access\s+to|know|store|hold)\b/i,
+    phase: 'reconnaissance',
+    confidence: 0.90,
+    description: 'Prompt extraction: what API keys/credentials do you have access to',
+    category: 'credential_extraction',
+    enabled: true,
+  },
+  // pe-010: "what is the exact text of your" + prompt/instructions
+  {
+    id: 'pe-010',
+    pattern: /\b(?:what\s+is|give\s+me|provide|share)\s+(?:the\s+)?(?:exact|full|complete|entire|original)\s+(?:text|content|wording|copy)\s+(?:of\s+)?(?:your\s+)?(?:\w+\s+)?(?:system\s+prompt|instructions?|original\s+prompt|directives?)\b/i,
+    phase: 'reconnaissance',
+    confidence: 0.92,
+    description: 'Prompt extraction: exact text of your system prompt/instructions',
+    category: 'prompt_extraction',
+    enabled: true,
+  },
+  // pe-011: "output the contents of" + sensitive files
+  {
+    id: 'pe-011',
+    pattern: /\b(?:output|print|display|show|read|cat|type)\s+(?:the\s+)?(?:contents?\s+of\s+)?(?:\/etc\/(?:passwd|shadow|hosts)|~\/\.ssh|\.env|config\.(?:json|yaml|yml|toml)|\.git\/config)\b/i,
+    phase: 'reconnaissance',
+    confidence: 0.92,
+    description: 'Prompt extraction: output contents of sensitive system files',
+    category: 'file_extraction',
+    enabled: true,
+  },
+  // pe-012: "output the contents of all environment variables"
+  {
+    id: 'pe-012',
+    pattern: /\b(?:output|print|display|show|list|dump|reveal)\s+(?:the\s+)?(?:contents?\s+of\s+)?(?:all\s+)?(?:environment\s+variables?|env\s+vars?|process\.env|os\.environ)\b/i,
+    phase: 'reconnaissance',
+    confidence: 0.88,
+    description: 'Prompt extraction: output all environment variables',
+    category: 'credential_extraction',
+    enabled: true,
+  },
+  // pe-013: "disclose its system prompt" / "disclose the existence"
+  {
+    id: 'pe-013',
+    pattern: /\b(?:disclose|reveal|expose|leak|divulge)\b[^.]{0,20}\b(?:system\s+prompt|instructions?|configuration|existence|internal|hidden)\b/i,
+    phase: 'reconnaissance',
+    confidence: 0.85,
+    description: 'Prompt extraction: disclose/reveal system prompt or hidden instructions',
+    category: 'prompt_extraction',
+    enabled: true,
+  },
 ] as const

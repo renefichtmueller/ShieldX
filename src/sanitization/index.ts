@@ -38,3 +38,5 @@ export type { RedactionResult } from './CredentialRedactor.js'
 
 export { SignedPromptVerifier } from './SignedPromptVerifier.js'
 export type { SignedPrompt, TamperingResult } from './SignedPromptVerifier.js'
+
+export { OutputPayloadGuard } from './OutputPayloadGuard.js'

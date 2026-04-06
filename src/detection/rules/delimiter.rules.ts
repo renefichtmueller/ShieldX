@@ -71,4 +71,22 @@ export const rules: readonly InjectionRule[] = [
     category: 'delimiter_attack',
     enabled: true,
   },
+  {
+    id: 'da-008',
+    pattern: /<<\/?SYS>>/i,
+    phase: 'initial_access',
+    confidence: 0.92,
+    description: 'Delimiter attack: <<SYS>>/<</SYS>> LLaMA system delimiters',
+    category: 'delimiter_attack',
+    enabled: true,
+  },
+  {
+    id: 'da-009',
+    pattern: /(?:---+|={3,})\s*END\s+(?:OF\s+)?SYSTEM\s+PROMPT\s*(?:---+|={0,})/i,
+    phase: 'initial_access',
+    confidence: 0.93,
+    description: 'Delimiter attack: END SYSTEM PROMPT marker (dashes or equals)',
+    category: 'delimiter_attack',
+    enabled: true,
+  },
 ] as const

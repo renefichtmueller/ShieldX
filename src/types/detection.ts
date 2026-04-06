@@ -29,6 +29,7 @@ export type ScannerType =
   | 'rag_shield'
   | 'tool_chain'
   | 'resource'
+  | 'supply_chain'
   | 'intent_guard'
 
 /** Action taken in response to a detected threat */
@@ -84,6 +85,16 @@ export interface ShieldXResult {
   readonly sessionCheckpoint?: string
   readonly latencyMs: number
   readonly metadata?: Readonly<Record<string, unknown>>
+  readonly ensemble?: Readonly<{
+    finalVote: 'clean' | 'suspicious' | 'threat'
+    finalConfidence: number
+    unanimous: boolean
+  }>
+  readonly atlasMapping?: Readonly<{
+    techniqueIds: readonly string[]
+    tacticCoverage: Readonly<Record<string, number>>
+    unmappedResults: number
+  }>
 }
 
 /** Full ShieldX configuration */
@@ -183,6 +194,25 @@ export interface ShieldXConfig {
     readonly level: 'silent' | 'error' | 'warn' | 'info' | 'debug'
     readonly structured: boolean
     readonly incidentLog: boolean
+  }
+
+  readonly supplyChain: {
+    readonly enabled: boolean
+    readonly trustedModelHashes?: Readonly<Record<string, string>>
+    readonly trustedRegistries?: readonly string[]
+    readonly maxAdapterSizeMB: number
+    readonly enableDependencyAudit: boolean
+    readonly runAuditOnStartup: boolean
+  }
+
+  readonly evolution: {
+    readonly enabled: boolean
+    readonly cycleIntervalMs: number
+    readonly maxFPRIncrease: number
+    readonly benignCorpusMinSize: number
+    readonly autoDeployThreshold: number
+    readonly maxRulesPerCycle: number
+    readonly rollbackWindowMs: number
   }
 }
 

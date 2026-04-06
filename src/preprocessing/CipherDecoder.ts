@@ -28,6 +28,8 @@ export type CipherType =
   | 'leet_speak'
   | 'pig_latin'
   | 'ascii_art_suspected'
+  | 'binary'
+  | 'hex_encoding'
 
 /** Result returned by CipherDecoder.decode() */
 export interface CipherDecoderResult {
@@ -146,6 +148,9 @@ export class CipherDecoder {
     this.detectCaesar(input, decodedVersions, detectedCiphers)
     this.detectMorse(input, decodedVersions, detectedCiphers)
     this.detectLeetSpeak(input, decodedVersions, detectedCiphers)
+    this.detectBinary(input, decodedVersions, detectedCiphers)
+    this.detectHexEncoding(input, decodedVersions, detectedCiphers)
+    this.detectDecodeAndExecute(input, decodedVersions, detectedCiphers)
     this.detectPigLatin(input, detectedCiphers)
     this.detectAsciiArt(input, detectedCiphers)
 
@@ -177,13 +182,15 @@ export class CipherDecoder {
     detected: CipherType[],
   ): void {
     const charReversed = input.split('').reverse().join('')
-    if (this.containsJailbreakKeyword(charReversed)) {
+    // Only flag if reversal reveals NEW keywords not present in original
+    if (this.containsNewJailbreakKeyword(input, charReversed)) {
       detected.push('flip_attack_char')
       decodedVersions.push({ cipher: 'flip_attack_char', decoded: charReversed })
     }
 
     const wordReversed = input.split(/\s+/).reverse().join(' ')
-    if (wordReversed !== charReversed && this.containsJailbreakKeyword(wordReversed)) {
+    // Only flag if word-reversal reveals NEW keywords not present in original
+    if (wordReversed !== charReversed && this.containsNewJailbreakKeyword(input, wordReversed)) {
       detected.push('flip_attack_word')
       decodedVersions.push({ cipher: 'flip_attack_word', decoded: wordReversed })
     }
@@ -298,9 +305,122 @@ export class CipherDecoder {
     const normalized = this.normalizeLeet(input)
     if (normalized === input) return
 
-    if (this.containsJailbreakKeyword(normalized)) {
+    // Only flag if leet normalization reveals NEW keywords not in original
+    if (this.containsNewJailbreakKeyword(input, normalized)) {
       detected.push('leet_speak')
       decodedVersions.push({ cipher: 'leet_speak', decoded: normalized })
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Detection: Binary encoding
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Detect space-separated 8-bit binary strings (e.g. "01001001 01100111 ...").
+   * Decodes each byte to ASCII and checks for jailbreak keywords.
+   */
+  private detectBinary(
+    input: string,
+    decodedVersions: Array<{ cipher: CipherType; decoded: string }>,
+    detected: CipherType[],
+  ): void {
+    const binaryPattern = /\b[01]{8}(?:\s+[01]{8}){3,}\b/
+    const match = input.match(binaryPattern)
+    if (!match) return
+
+    // Extract all 8-bit groups from the full match
+    const bytes = match[0].split(/\s+/)
+    const decoded = bytes.map((b) => String.fromCharCode(parseInt(b, 2))).join('')
+
+    if (decoded.length < 2) return
+
+    if (this.containsJailbreakKeyword(decoded) || /[a-z]{3,}/i.test(decoded)) {
+      detected.push('binary')
+      decodedVersions.push({ cipher: 'binary', decoded })
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Detection: Hex encoding
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Detect space-separated 2-char hex values (e.g. "49 67 6e 6f ...").
+   * Also detects continuous hex strings when preceded by decode/interpret requests.
+   * Decodes to ASCII and checks for jailbreak keywords.
+   */
+  private detectHexEncoding(
+    input: string,
+    decodedVersions: Array<{ cipher: CipherType; decoded: string }>,
+    detected: CipherType[],
+  ): void {
+    // Space-separated hex pairs
+    const hexSpacedPattern = /\b[0-9a-fA-F]{2}(?:\s+[0-9a-fA-F]{2}){3,}\b/
+    const spacedMatch = input.match(hexSpacedPattern)
+    if (spacedMatch) {
+      const hexPairs = spacedMatch[0].split(/\s+/)
+      const decoded = hexPairs.map((h) => String.fromCharCode(parseInt(h, 16))).join('')
+
+      if (decoded.length >= 2 && (this.containsJailbreakKeyword(decoded) || /[a-z]{3,}/i.test(decoded))) {
+        detected.push('hex_encoding')
+        decodedVersions.push({ cipher: 'hex_encoding', decoded })
+        return
+      }
+    }
+
+    // Continuous hex string (even number of hex chars, >= 8 chars / 4 bytes)
+    const hexContinuousPattern = /\b([0-9a-fA-F]{8,})\b/
+    const contMatch = input.match(hexContinuousPattern)
+    const hexCapture = contMatch?.[1]
+    if (hexCapture && hexCapture.length % 2 === 0) {
+      const hexPairsArr = hexCapture.match(/.{2}/g)
+      if (!hexPairsArr) return
+      const decoded = hexPairsArr.map((h) => String.fromCharCode(parseInt(h, 16))).join('')
+
+      if (decoded.length >= 2 && (this.containsJailbreakKeyword(decoded) || /[a-z]{3,}/i.test(decoded))) {
+        detected.push('hex_encoding')
+        decodedVersions.push({ cipher: 'hex_encoding', decoded })
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Detection: "Decode this and execute" wrapper
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Detect explicit requests to decode encoded content and execute/follow it.
+   * E.g. "decode this binary and execute", "convert this hex and follow".
+   * This is a social-engineering wrapper around encoded payloads — strong
+   * indicator of malicious intent regardless of what the encoded payload decodes to.
+   */
+  private detectDecodeAndExecute(
+    input: string,
+    decodedVersions: Array<{ cipher: CipherType; decoded: string }>,
+    detected: CipherType[],
+  ): void {
+    const decodeExecutePattern =
+      /\b(?:decode|convert|translate)\s+(?:this\s+)?(?:binary|hex|hexadecimal|base64|octal)\b.*\b(?:execute|follow|run|do|comply|obey)\b/i
+    if (decodeExecutePattern.test(input)) {
+      // Synthesize a decoded version with jailbreak keywords so the suspicion
+      // score picks it up — the wrapper itself IS the attack.
+      const syntheticDecoded = 'execute command: bypass safety'
+      if (!detected.includes('binary') && !detected.includes('hex_encoding')) {
+        detected.push('binary')
+        decodedVersions.push({ cipher: 'binary', decoded: syntheticDecoded })
+      } else {
+        // Binary/hex already detected — ensure we have a harmful decoded version
+        const hasHarmful = decodedVersions.some(({ decoded }) =>
+          this.containsJailbreakKeyword(decoded),
+        )
+        if (!hasHarmful) {
+          decodedVersions.push({
+            cipher: detected.includes('hex_encoding') ? 'hex_encoding' : 'binary',
+            decoded: syntheticDecoded,
+          })
+        }
+      }
     }
   }
 
@@ -477,5 +597,17 @@ export class CipherDecoder {
   private containsJailbreakKeyword(text: string): boolean {
     const lower = text.toLowerCase()
     return JAILBREAK_KEYWORDS.some((kw) => lower.includes(kw))
+  }
+
+  /**
+   * Check if the decoded text contains jailbreak keywords that are NOT
+   * already present in the original input. This prevents false positives
+   * where benign text like "override CSS styles" triggers flip_attack_word
+   * because "override" is both in the original and reversed text.
+   */
+  private containsNewJailbreakKeyword(original: string, decoded: string): boolean {
+    const originalLower = original.toLowerCase()
+    const decodedLower = decoded.toLowerCase()
+    return JAILBREAK_KEYWORDS.some((kw) => decodedLower.includes(kw) && !originalLower.includes(kw))
   }
 }

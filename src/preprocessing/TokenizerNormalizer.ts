@@ -59,6 +59,98 @@ const DASH_REGEX = /[\u2012-\u2015\u2053\u2212]/g
 const MULTI_SPACE_REGEX = / {2,}/g
 
 // ---------------------------------------------------------------------------
+// Deobfuscation: separator-split attack keyword detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Attack keywords that adversaries commonly split with separators.
+ * Lowercase for case-insensitive matching.
+ */
+const ATTACK_KEYWORDS: readonly string[] = Object.freeze([
+  'ignore', 'previous', 'instructions', 'disregard', 'forget',
+  'override', 'bypass', 'system', 'prompt', 'jailbreak',
+  'restrict', 'filter', 'safety', 'guideline', 'execute',
+  'command', 'admin', 'sudo', 'inject', 'instruction',
+])
+
+/**
+ * Pattern matching single characters separated by dots, dashes, or underscores.
+ * Matches sequences like "I.g.n.o.r.e" or "I-g-n-o-r-e" or "I_g_n_o_r_e"
+ * (3+ single chars joined by a consistent separator).
+ */
+const SINGLE_CHAR_SEPARATOR_REGEX = /\b([A-Za-z])[.\-_]([A-Za-z])[.\-_]([A-Za-z])(?:[.\-_]([A-Za-z]))*\b/g
+
+/**
+ * Collapse single-character separator patterns to joined words.
+ * "I.g.n.o.r.e" -> "Ignore", "I_g_n_o_r_e" -> "Ignore"
+ */
+function collapseSingleCharSeparators(input: string): string {
+  return input.replace(SINGLE_CHAR_SEPARATOR_REGEX, (match) => {
+    // Remove any separator between single characters
+    return match.replace(/[.\-_]/g, '')
+  })
+}
+
+/**
+ * Attempt to rejoin words split by spaces, dashes, or underscores by
+ * checking if removing separators within "words" reveals attack keywords.
+ *
+ * Strategy:
+ * 1. Split input into whitespace-delimited tokens
+ * 2. For each token containing dashes/underscores, collapse them
+ * 3. Then try merging adjacent tokens (greedy) to reconstruct keywords
+ * 4. If a keyword is found in the collapsed form, use the collapsed form
+ */
+function deobfuscateSplitWords(input: string): string {
+  // Step 1: Collapse intra-word dashes and underscores in each token
+  //         "in-struc-tions" -> "instructions", "pre-vi-ous" -> "previous"
+  const tokens = input.split(/\s+/)
+  const collapsedTokens = tokens.map(t => {
+    // If token contains dashes or underscores between letters, try collapsing
+    if (/[A-Za-z][-_][A-Za-z]/.test(t)) {
+      const collapsed = t.replace(/[-_]/g, '')
+      // Check if the collapsed form contains an attack keyword
+      const lower = collapsed.toLowerCase()
+      for (const kw of ATTACK_KEYWORDS) {
+        if (lower === kw || lower.includes(kw)) {
+          return collapsed
+        }
+      }
+    }
+    return t
+  })
+
+  // Step 2: Greedy merge of adjacent tokens to find hidden keywords
+  //         "igno re" -> "ignore", "instru ctions" -> "instructions"
+  const merged: string[] = []
+  let i = 0
+  while (i < collapsedTokens.length) {
+    const currentToken = collapsedTokens[i] ?? ''
+    let bestMerge = currentToken
+    let bestEnd = i
+
+    // Try merging up to 6 consecutive tokens (covers heavily split words)
+    let candidate = currentToken
+    for (let j = i + 1; j < Math.min(i + 7, collapsedTokens.length); j++) {
+      const nextToken = collapsedTokens[j] ?? ''
+      candidate += nextToken
+      const lower = candidate.toLowerCase()
+      for (const kw of ATTACK_KEYWORDS) {
+        if (lower === kw) {
+          bestMerge = candidate
+          bestEnd = j
+        }
+      }
+    }
+
+    merged.push(bestMerge)
+    i = bestEnd + 1
+  }
+
+  return merged.join(' ')
+}
+
+// ---------------------------------------------------------------------------
 // TokenizerNormalizer class
 // ---------------------------------------------------------------------------
 
@@ -99,6 +191,16 @@ export class TokenizerNormalizer {
 
     // 7. Collapse multiple spaces to single
     result = result.replace(MULTI_SPACE_REGEX, ' ')
+
+    // 8. Deobfuscate separator-split attack words
+    //    Collapse single-char separators: "I.g.n.o.r.e" -> "Ignore"
+    result = collapseSingleCharSeparators(result)
+
+    // 9. Rejoin split words: "igno re" -> "ignore", "in-struc-tions" -> "instructions"
+    result = deobfuscateSplitWords(result)
+
+    // 10. Final whitespace cleanup after deobfuscation
+    result = result.replace(MULTI_SPACE_REGEX, ' ').trim()
 
     return result
   }

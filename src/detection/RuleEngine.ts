@@ -17,6 +17,7 @@ import { rules as exfiltrationRules } from './rules/exfiltration.rules'
 import { rules as mcpRules } from './rules/mcp.rules'
 import { rules as multilingualRules } from './rules/multilingual.rules'
 import { rules as dnsCovertChannelRules } from './rules/dns-covert-channel.rules'
+import { rules as authorityClaimRules } from './rules/authority-claim.rules'
 
 /**
  * Map a confidence score to a threat level.
@@ -159,6 +160,7 @@ export class RuleEngine {
       mcpRules,
       multilingualRules,
       dnsCovertChannelRules,
+      authorityClaimRules,
     ]
 
     for (const ruleSet of allRules) {

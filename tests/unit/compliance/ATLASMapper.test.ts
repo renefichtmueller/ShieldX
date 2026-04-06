@@ -107,7 +107,7 @@ describe('ATLASMapper', () => {
     it('should return coverage statistics', () => {
       const coverage = mapper.getCoverage()
       expect(coverage.covered).toBeGreaterThan(0)
-      expect(coverage.total).toBe(20)
+      expect(coverage.total).toBe(29)
       expect(coverage.covered).toBeLessThanOrEqual(coverage.total)
     })
 
@@ -116,7 +116,7 @@ describe('ATLASMapper', () => {
       expect(coverage.gaps.length).toBeGreaterThan(0)
       // Gaps should be technique IDs not covered
       for (const gap of coverage.gaps) {
-        expect(gap).toMatch(/^AML\.T\d+/)
+        expect(gap).toMatch(/^AML\.T(A)?\d+/)
       }
     })
 

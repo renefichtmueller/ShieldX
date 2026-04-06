@@ -1,6 +1,6 @@
 {
   "name": "@shieldx/core",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Self-evolving LLM prompt injection defense — 10-layer detection, kill chain mapping, self-healing, self-learning",
   "author": "Context X <opensource@context-x.org>",
   "license": "Apache-2.0",

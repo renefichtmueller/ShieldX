@@ -72,3 +72,24 @@ export {
   setPricing,
   clearSession as clearResourceSession,
 } from './ResourceGovernor.js'
+
+export {
+  categorize as categorizeToolCall,
+  validate as validateToolCallSafety,
+} from './ToolCallSafetyGuard.js'
+
+export type {
+  ToolCategory,
+  ViolationSeverity,
+  ViolationCategory,
+  SafetyViolation,
+  ToolCallSafetyResult,
+} from './ToolCallSafetyGuard.js'
+
+// MELONGuard — Masked Execution Logic for MCP (ICML 2025-inspired)
+export { MELONGuard } from './MELONGuard.js'
+export type {
+  MELONConfig,
+  MELONEvidence,
+  MELONResult,
+} from './MELONGuard.js'

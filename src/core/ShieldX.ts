@@ -40,34 +40,90 @@ import { createLogger } from './logger.js'
 import { UnicodeNormalizer } from '../preprocessing/UnicodeNormalizer.js'
 import { TokenizerNormalizer } from '../preprocessing/TokenizerNormalizer.js'
 import { CompressedPayloadDetector } from '../preprocessing/CompressedPayloadDetector.js'
+import { CipherDecoder } from '../preprocessing/CipherDecoder.js'
 
 // L1 — Rule-based detection
 import { RuleEngine } from '../detection/RuleEngine.js'
 import { EntropyScanner } from '../detection/EntropyScanner.js'
 import { UnicodeScanner } from '../detection/UnicodeScanner.js'
 
+// L3 — Indirect injection detection
+import { IndirectInjectionDetector } from '../detection/IndirectInjectionDetector.js'
+
+// Early-pipeline — Resource exhaustion (DoS-via-LLM)
+import { ResourceExhaustionDetector } from '../detection/ResourceExhaustionDetector.js'
+
 // L6 — Behavioral monitoring (functional API)
 import { scan as conversationScan } from '../behavioral/ConversationTracker.js'
 import { check as intentCheck } from '../behavioral/IntentMonitor.js'
 import { checkIntegrity } from '../behavioral/ContextIntegrity.js'
 
+// L6 — Auth context manipulation guard
+import { AuthContextGuard } from '../behavioral/AuthContextGuard.js'
+
+// L6 — Enhanced multi-turn decomposition detection
+import { DecompositionDetector } from '../behavioral/DecompositionDetector.js'
+
 // L7 — MCP Guard (functional API)
+import { MELONGuard } from '../mcp-guard/MELONGuard.js'
 import { checkPrivilege } from '../mcp-guard/PrivilegeChecker.js'
 import {
   recordCall as recordToolCall,
   analyzeSequence as analyzeToolSequence,
 } from '../mcp-guard/ToolChainGuard.js'
 import { checkBudget } from '../mcp-guard/ResourceGovernor.js'
+import { validate as validateSafety } from '../mcp-guard/ToolCallSafetyGuard.js'
 
 // L8 — Sanitization
 import { InputSanitizer } from '../sanitization/InputSanitizer.js'
 import { OutputSanitizer } from '../sanitization/OutputSanitizer.js'
+import { OutputPayloadGuard } from '../sanitization/OutputPayloadGuard.js'
+
+// L2 — Semantic Contrastive Scanner
+import { SemanticContrastiveScanner, bagOfWordsEmbedding } from '../semantic/SemanticContrastiveScanner.js'
+import { EmbeddingStore } from '../learning/EmbeddingStore.js'
+
+// Canary token detection
+import { CanaryManager } from '../validation/CanaryManager.js'
+
+// Learning engine
+import { PatternStore } from '../learning/PatternStore.js'
+import { ActiveLearner } from '../learning/ActiveLearner.js'
+import { RedTeamEngine } from '../learning/RedTeamEngine.js'
+import { DriftDetector } from '../learning/DriftDetector.js'
+import { ThresholdAdaptor } from '../learning/ThresholdAdaptor.js'
+
+// Evolution engine
+import { EvolutionEngine } from '../learning/EvolutionEngine.js'
+import { PatternEvolver } from '../learning/PatternEvolver.js'
+
+// Adversarial training — game-theoretic self-training (IEEE S&P 2025)
+import { AdversarialTrainer } from '../learning/AdversarialTrainer.js'
+import type { TrainingResult } from '../learning/AdversarialTrainer.js'
+
+// Phase 1: Immune Memory + Fever Response + Over-Defense Calibration
+import { ImmuneMemory } from '../learning/ImmuneMemory.js'
+import type { ImmuneMemoryStats } from '../learning/ImmuneMemory.js'
+import { FeverResponse } from './FeverResponse.js'
+import type { FeverState } from './FeverResponse.js'
+import { OverDefenseCalibrator } from '../learning/OverDefenseCalibrator.js'
+import type { CalibrationResult } from '../learning/OverDefenseCalibrator.js'
 
 // Kill chain classification
 import { KillChainMapper } from '../behavioral/KillChainMapper.js'
 
 // Healing
 import { HealingOrchestrator } from '../healing/HealingOrchestrator.js'
+
+// Supply chain integrity
+import { ModelIntegrityGuard } from '../supply-chain/ModelIntegrityGuard.js'
+import type { IntegrityCheckResult } from '../supply-chain/ModelIntegrityGuard.js'
+
+// Phase 3: Defense Ensemble + ATLAS technique mapping
+import { DefenseEnsemble } from './DefenseEnsemble.js'
+import type { EnsembleVerdict } from './DefenseEnsemble.js'
+import { AtlasTechniqueMapper } from './AtlasTechniqueMapper.js'
+import type { AtlasMappingResult } from './AtlasTechniqueMapper.js'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -109,6 +165,7 @@ export class ShieldX {
   private readonly unicodeNormalizer: UnicodeNormalizer
   private readonly tokenizerNormalizer: TokenizerNormalizer
   private readonly compressedPayloadDetector: CompressedPayloadDetector
+  private readonly cipherDecoder: CipherDecoder
 
   // L1
   private readonly ruleEngine: RuleEngine
@@ -119,9 +176,29 @@ export class ShieldX {
   // L5
   private readonly unicodeScanner: UnicodeScanner
 
+  // L3 — Indirect injection
+  private readonly indirectInjectionDetector: IndirectInjectionDetector
+
+  // Early-pipeline — Resource exhaustion
+  private readonly resourceExhaustionDetector: ResourceExhaustionDetector
+
+  // L6 — Auth context guard
+  private readonly authContextGuard: AuthContextGuard
+
+  // L6 — Enhanced decomposition detection
+  private readonly decompositionDetector: DecompositionDetector
+
+  // L2
+  private readonly embeddingStore: EmbeddingStore
+  private readonly semanticContrastiveScanner: SemanticContrastiveScanner
+
   // L8
   private readonly inputSanitizer: InputSanitizer
   private readonly outputSanitizer: OutputSanitizer
+  private readonly outputPayloadGuard: OutputPayloadGuard
+
+  // Canary detection
+  private readonly canaryManager: CanaryManager
 
   // Kill chain + Healing
   private readonly killChainMapper: KillChainMapper
@@ -129,6 +206,32 @@ export class ShieldX {
 
   // Resistance Testing
   private readonly resistanceTestEngine: ResistanceTestEngine
+
+  // Learning engine
+  private readonly patternStore: PatternStore
+  private readonly activeLearner: ActiveLearner
+  private readonly redTeamEngine: RedTeamEngine
+  private readonly driftDetector: DriftDetector
+  private readonly thresholdAdaptor: ThresholdAdaptor
+  private readonly patternEvolver: PatternEvolver
+
+  // Evolution engine
+  private readonly evolutionEngine: EvolutionEngine
+
+  // Phase 1: Immune Memory + Fever Response
+  private readonly immuneMemory: ImmuneMemory
+  private readonly feverResponse: FeverResponse
+
+  // Phase 2: MELONGuard + AdversarialTrainer
+  private readonly melonGuard: MELONGuard
+  private readonly adversarialTrainer: AdversarialTrainer
+
+  // Supply chain integrity
+  private readonly modelIntegrityGuard: ModelIntegrityGuard
+
+  // Phase 3: Defense Ensemble + ATLAS mapping
+  private readonly defenseEnsemble: DefenseEnsemble
+  private readonly atlasTechniqueMapper: AtlasTechniqueMapper
 
   private initialized = false
 
@@ -145,15 +248,40 @@ export class ShieldX {
     this.unicodeNormalizer = new UnicodeNormalizer(this.config)
     this.tokenizerNormalizer = new TokenizerNormalizer(this.config)
     this.compressedPayloadDetector = new CompressedPayloadDetector(this.config)
+    this.cipherDecoder = new CipherDecoder(this.config)
 
     // L1 — rule engine
     this.ruleEngine = new RuleEngine(this.config)
     this.entropyScanner = new EntropyScanner()
     this.unicodeScanner = new UnicodeScanner()
 
+    // L3 — indirect injection detector (stateless, pre-compiled regexes)
+    this.indirectInjectionDetector = new IndirectInjectionDetector()
+
+    // Early-pipeline — resource exhaustion detector (stateless, pre-compiled regexes)
+    this.resourceExhaustionDetector = new ResourceExhaustionDetector()
+
+    // L6 — auth context guard (stateful per-session escalation tracking)
+    this.authContextGuard = new AuthContextGuard()
+
+    // L6 — enhanced decomposition detection
+    this.decompositionDetector = new DecompositionDetector()
+
+    // L2 — Semantic Contrastive Scanner with in-memory embedding store
+    this.embeddingStore = new EmbeddingStore({ backend: 'memory' })
+    this.semanticContrastiveScanner = new SemanticContrastiveScanner(this.embeddingStore)
+
     // L8 — sanitization
     this.inputSanitizer = new InputSanitizer(this.config)
     this.outputSanitizer = new OutputSanitizer(this.config)
+    this.outputPayloadGuard = new OutputPayloadGuard()
+
+    // Canary detection — session-scoped tokens for prompt leakage detection
+    // Config stores rotationInterval in seconds; CanaryManager expects milliseconds
+    this.canaryManager = new CanaryManager(
+      this.config.canary.tokenCount,
+      this.config.canary.rotationInterval * 1000,
+    )
 
     // Kill chain + healing
     this.killChainMapper = new KillChainMapper()
@@ -170,6 +298,88 @@ export class ShieldX {
       },
     )
 
+    // Learning engine — PatternStore as persistent backend, plus active learning modules
+    const storageBackend = this.config.learning.storageBackend === 'postgresql'
+      ? 'postgresql' as const
+      : 'memory' as const
+    this.patternStore = new PatternStore({
+      backend: storageBackend,
+      ...(this.config.learning.connectionString !== undefined
+        ? { connectionString: this.config.learning.connectionString }
+        : {}),
+    })
+    this.activeLearner = new ActiveLearner()
+    this.redTeamEngine = new RedTeamEngine()
+    this.driftDetector = new DriftDetector()
+    this.thresholdAdaptor = new ThresholdAdaptor()
+    this.patternEvolver = new PatternEvolver()
+
+    // Evolution engine — autonomous defense improvement
+    this.evolutionEngine = new EvolutionEngine(
+      this.config.evolution,
+      async (input) => {
+        const r = await this.scanInput(input)
+        return {
+          ...r,
+          confidence: Math.max(...r.scanResults.map(s => s.confidence), 0),
+        }
+      },
+      this.patternStore,
+      this.redTeamEngine,
+      this.patternEvolver,
+    )
+
+    // Phase 1: Immune Memory — shares the L2 EmbeddingStore for zero-copy recall
+    this.immuneMemory = new ImmuneMemory(
+      { enabled: this.config.learning.enabled },
+      this.embeddingStore,
+    )
+
+    // Phase 1: Fever Response — elevated alertness after high-severity detection
+    this.feverResponse = new FeverResponse({ enabled: true })
+
+    // Phase 2: MELONGuard — injection-driven tool call detection (ICML 2025)
+    this.melonGuard = new MELONGuard(
+      { enabled: this.config.mcpGuard.enabled },
+      this.ruleEngine,
+      this.indirectInjectionDetector,
+    )
+
+    // Phase 2: AdversarialTrainer — game-theoretic self-training (IEEE S&P 2025)
+    this.adversarialTrainer = new AdversarialTrainer(
+      { enabled: this.config.learning.enabled },
+      {
+        scan: async (input: string) => {
+          const r = await this.scanInput(input)
+          return r.scanResults
+        },
+      },
+      this.redTeamEngine,
+      this.patternEvolver,
+      this.thresholdAdaptor,
+    )
+
+    // Supply chain integrity guard
+    const supplyChainInit: Record<string, unknown> = {
+      maxAdapterSizeMB: this.config.supplyChain.maxAdapterSizeMB,
+      enableDependencyAudit: this.config.supplyChain.enableDependencyAudit,
+    }
+    if (this.config.supplyChain.trustedModelHashes !== undefined) {
+      supplyChainInit['trustedModelHashes'] = { ...this.config.supplyChain.trustedModelHashes }
+    }
+    if (this.config.supplyChain.trustedRegistries !== undefined) {
+      supplyChainInit['trustedRegistries'] = [...this.config.supplyChain.trustedRegistries]
+    }
+    this.modelIntegrityGuard = new ModelIntegrityGuard(
+      supplyChainInit as import('../supply-chain/ModelIntegrityGuard.js').ModelIntegrityConfig,
+    )
+
+    // Phase 3: Defense Ensemble — 3-voter weighted majority
+    this.defenseEnsemble = new DefenseEnsemble()
+
+    // Phase 3: ATLAS technique mapping — maps detections to MITRE ATLAS IDs
+    this.atlasTechniqueMapper = new AtlasTechniqueMapper()
+
     this.log.info({ scanners: this.config.scanners }, 'ShieldX instance created')
   }
 
@@ -185,6 +395,43 @@ export class ShieldX {
     if (this.initialized) return
     this.log.info('Initializing ShieldX...')
     // Future: database migrations, pattern loading, model warm-up
+
+    // L2: Initialize embedding store and seed canonical examples
+    await this.embeddingStore.initialize()
+    await this.semanticContrastiveScanner.seedHarmfulExamples()
+    this.log.info('L2 SemanticContrastiveScanner seeded with canonical examples')
+
+    // Learning engine: initialize pattern store (runs migrations for PostgreSQL, no-op for memory)
+    await this.patternStore.initialize()
+    this.log.info('Learning engine PatternStore initialized')
+
+    // Supply chain: run startup audit if configured
+    if (this.config.supplyChain.enabled && this.config.supplyChain.runAuditOnStartup) {
+      try {
+        const auditResult = await this.modelIntegrityGuard.runFullAudit()
+        if (auditResult.passed) {
+          this.log.info('Supply chain startup audit passed')
+        } else {
+          this.log.warn(
+            { overallRisk: auditResult.overallRisk, checks: auditResult.checks.filter((c) => !c.passed) },
+            'Supply chain startup audit found issues',
+          )
+        }
+      } catch (error: unknown) {
+        this.log.error({ error }, 'Supply chain startup audit failed')
+      }
+    }
+
+    // Evolution engine: load benign corpus and start cycle timer if enabled
+    if (this.config.evolution.enabled) {
+      try {
+        await this.evolutionEngine.initialize()
+        this.log.info('EvolutionEngine initialized and cycle timer started')
+      } catch (error: unknown) {
+        this.log.error({ error }, 'EvolutionEngine initialization failed')
+      }
+    }
+
     this.initialized = true
     this.log.info('ShieldX initialized')
   }
@@ -194,9 +441,10 @@ export class ShieldX {
    *
    * Pipeline order:
    * 1. L0: Preprocessing (Unicode, Tokenizer, CompressedPayload)
+   * 1b. Resource exhaustion check (early reject for token bombs)
    * 2. L1+L2: Rule engine + Sentinel classifier (parallel)
    * 3. L3-L5: Embedding, entropy, attention scanners (parallel)
-   * 4. L6: Behavioral monitoring (conversation, intent, context)
+   * 4. L6: Behavioral monitoring (conversation, intent, context, auth guard)
    * 5. L7: MCP Guard (if tool call context)
    * 6. Aggregate, classify kill chain, determine healing action
    * 7. L8: Sanitize if needed
@@ -216,6 +464,41 @@ export class ShieldX {
     // -- L0: Preprocessing --------------------------------------------------
     const { normalizedInput, l0Results } = await this.runPreprocessing(input)
     allResults.push(...l0Results)
+
+    // -- Early: Resource exhaustion check (before expensive scanners) --------
+    const resourceResults = this.resourceExhaustionDetector.scan(normalizedInput)
+    allResults.push(...resourceResults)
+
+    // -- Immune Memory: recall known attack patterns (pre-L1) ---------------
+    let immuneSuspicionBoost = 0
+    const immuneRecall = await this.immuneMemory.recall(normalizedInput)
+    if (immuneRecall.matched) {
+      immuneSuspicionBoost = immuneRecall.suspicionBoost
+      if (immuneRecall.preClassified) {
+        allResults.push({
+          scannerId: 'immune-memory',
+          scannerType: 'embedding' as const,
+          detected: true,
+          confidence: immuneRecall.suspicionBoost,
+          threatLevel: 'medium' as ThreatLevel,
+          killChainPhase: (immuneRecall.preClassifiedPhase ?? 'none') as KillChainPhase,
+          matchedPatterns: [`immune_memory_match:similarity=${immuneRecall.matches[0]?.similarity.toFixed(3)}`],
+          latencyMs: 0,
+          metadata: Object.freeze({
+            preClassified: true,
+            matchCount: immuneRecall.matches.length,
+            topSimilarity: immuneRecall.matches[0]?.similarity ?? 0,
+          }),
+        })
+      }
+    }
+
+    // -- Fever Response: check session fever state (pre-L1) -----------------
+    const sessionId = context?.sessionId ?? 'anonymous'
+    const feverCheck = this.feverResponse.check(sessionId)
+    if (feverCheck.inFever) {
+      immuneSuspicionBoost = Math.min(immuneSuspicionBoost + feverCheck.suspicionBoost, 1.0)
+    }
 
     // -- L1 + L2: Rule engine + Sentinel (parallel) -------------------------
     const l1l2Results = await this.runDetectionLayer(normalizedInput)
@@ -260,6 +543,18 @@ export class ShieldX {
       sanitizedInput = sanitizationResult.sanitized
     }
 
+    // -- Phase 3: Defense Ensemble — 3-voter weighted majority ----------------
+    const ensembleVerdict: EnsembleVerdict = this.defenseEnsemble.evaluate(allResults)
+
+    // Override detected/threatLevel if ensemble disagrees (ensemble is authoritative)
+    const ensembleDetected = ensembleVerdict.finalVote !== 'clean'
+    const ensembleThreatLevel = ensembleDetected
+      ? ensembleVerdict.maxThreatLevel
+      : threatLevel
+
+    // -- Phase 3: ATLAS technique mapping -----------------------------------
+    const atlasResult: AtlasMappingResult = this.atlasTechniqueMapper.map(allResults)
+
     const latencyMs = performance.now() - startTime
 
     const result: ShieldXResult = {
@@ -267,13 +562,65 @@ export class ShieldX {
       timestamp: new Date().toISOString(),
       input,
       ...(sanitizedInput !== undefined ? { sanitizedInput } : {}),
-      detected,
-      threatLevel,
+      detected: detected || ensembleDetected,
+      threatLevel: THREAT_SEVERITY[ensembleThreatLevel] > THREAT_SEVERITY[threatLevel]
+        ? ensembleThreatLevel : threatLevel,
       killChainPhase: classification.primaryPhase,
       action,
       scanResults: allResults,
       healingApplied: action !== 'allow',
       latencyMs,
+      ensemble: Object.freeze({
+        finalVote: ensembleVerdict.finalVote,
+        finalConfidence: ensembleVerdict.finalConfidence,
+        unanimous: ensembleVerdict.unanimous,
+      }),
+      atlasMapping: Object.freeze({
+        techniqueIds: atlasResult.techniqueIds,
+        tacticCoverage: Object.freeze(
+          Object.fromEntries(atlasResult.tacticCoverage),
+        ),
+        unmappedResults: atlasResult.unmappedResults,
+      }),
+    }
+
+    // -- Feed learning engine with scan results --------------------------------
+    // Record each scan result's confidence in the drift detector
+    for (const sr of allResults) {
+      this.driftDetector.recordConfidence(sr)
+    }
+
+    // Route uncertain results to active learner for human review sampling
+    for (const sr of allResults) {
+      this.activeLearner.shouldRequestReview(sr)
+    }
+
+    // Store the result in PatternStore for learning (fire-and-forget)
+    this.patternStore.store(result).catch((err) => {
+      this.log.warn({ err }, 'Failed to store scan result in PatternStore')
+    })
+
+    // -- Immune Memory: remember detected attacks (fire-and-forget) ----------
+    if (detected) {
+      this.immuneMemory.remember(normalizedInput, result).catch((err) => {
+        this.log.warn({ err }, 'Failed to store attack in ImmuneMemory')
+      })
+    }
+
+    // -- Fever Response: trigger fever on high-severity detection -------------
+    if (detected && THREAT_SEVERITY[threatLevel] >= THREAT_SEVERITY['high']) {
+      const feverState = this.feverResponse.trigger(sessionId, result)
+      if (feverState.expiresAt > feverState.triggeredAt) {
+        this.log.info(
+          { sessionId, expiresAt: feverState.expiresAt },
+          'Fever mode activated for session',
+        )
+      }
+    }
+
+    // -- Fever Response: record additional detection during fever -------------
+    if (detected && feverCheck.inFever) {
+      this.feverResponse.recordAdditionalDetection(sessionId)
     }
 
     this.log.info(
@@ -285,6 +632,8 @@ export class ShieldX {
         action,
         latencyMs: Math.round(latencyMs * 100) / 100,
         scannerCount: allResults.length,
+        immuneBoost: immuneSuspicionBoost > 0 ? immuneSuspicionBoost : undefined,
+        inFever: feverCheck.inFever || undefined,
       },
       'Input scan complete',
     )
@@ -338,6 +687,14 @@ export class ShieldX {
     }
     allResults.push(outputScanResult)
 
+    // Output payload guard — detect SQL injection, XSS, SSRF, shell commands, path traversal
+    const payloadResults = this.outputPayloadGuard.scan(output)
+    allResults.push(...payloadResults)
+
+    // Auth context guard — detect identity manipulation in LLM output
+    const authOutputResults = this.authContextGuard.scanOutput(output, _context?.sessionId)
+    allResults.push(...authOutputResults)
+
     const detected = allResults.some((r) => r.detected)
     const threatLevel = this.aggregateThreatLevel(allResults)
     const classification = this.killChainMapper.classify(allResults)
@@ -351,6 +708,10 @@ export class ShieldX {
     const sanitizedOutput = detected
       ? sanitizationResult.sanitized
       : undefined
+
+    // Phase 3: Defense Ensemble + ATLAS mapping for output scan
+    const outputEnsemble = this.defenseEnsemble.evaluate(allResults)
+    const outputAtlas = this.atlasTechniqueMapper.map(allResults)
 
     const latencyMs = performance.now() - startTime
 
@@ -366,6 +727,18 @@ export class ShieldX {
       scanResults: allResults,
       healingApplied: action !== 'allow',
       latencyMs,
+      ensemble: Object.freeze({
+        finalVote: outputEnsemble.finalVote,
+        finalConfidence: outputEnsemble.finalConfidence,
+        unanimous: outputEnsemble.unanimous,
+      }),
+      atlasMapping: Object.freeze({
+        techniqueIds: outputAtlas.techniqueIds,
+        tacticCoverage: Object.freeze(
+          Object.fromEntries(outputAtlas.tacticCoverage),
+        ),
+        unmappedResults: outputAtlas.unmappedResults,
+      }),
     }
 
     this.log.info(
@@ -391,6 +764,7 @@ export class ShieldX {
    * 2. Privilege check (least-privilege enforcement)
    * 3. Tool chain sequence analysis
    * 4. Resource budget check
+   * 5. MELONGuard — injection-driven tool call detection (ICML 2025)
    *
    * @param toolName - Name of the tool being invoked
    * @param toolArgs - Arguments passed to the tool
@@ -461,6 +835,71 @@ export class ShieldX {
       }
     }
 
+    // 4. Tool call safety guard — argument pattern validation
+    if (this.config.mcpGuard.validateToolCalls) {
+      const safetyResult = validateSafety(toolName, toolArgs)
+      if (!safetyResult.allowed) {
+        const violationSummary = safetyResult.violations
+          .map((v) => `${v.category}:${v.matchedPattern} in "${v.parameterName}" [${v.severity}]`)
+          .join('; ')
+        return {
+          allowed: false,
+          reason: `Tool call safety violation: ${violationSummary}`,
+          result: {
+            scannerId: 'tool-call-safety-guard',
+            scannerType: 'tool_chain' as const,
+            detected: true,
+            confidence: safetyResult.riskScore,
+            threatLevel: safetyResult.riskScore >= 0.8 ? 'critical' as const
+              : safetyResult.riskScore >= 0.5 ? 'high' as const
+              : 'medium' as const,
+            killChainPhase: 'actions_on_objective' as const,
+            matchedPatterns: safetyResult.violations.map((v) => `${v.category}:${v.matchedPattern}`),
+            latencyMs: performance.now() - startTime,
+            metadata: {
+              toolCategory: safetyResult.toolCategory,
+              riskScore: safetyResult.riskScore,
+              violationCount: safetyResult.violations.length,
+            },
+          },
+        }
+      }
+    }
+
+    // 5. MELONGuard — injection-driven tool call detection (ICML 2025)
+    const melonResult = this.melonGuard.analyze(
+      toolName,
+      toolArgs,
+      undefined,                         // toolResults: caller can provide via extended API
+      context.taskDescription,           // userPrompt: use task description as proxy for user intent
+    )
+    if (melonResult.injectionDriven && melonResult.recommendation === 'block') {
+      const evidenceSummary = melonResult.evidence
+        .map(e => `${e.type}(${e.confidence.toFixed(2)}): ${e.detail.slice(0, 80)}`)
+        .join('; ')
+      return {
+        allowed: false,
+        reason: `MELON: Injection-driven tool call detected (confidence: ${melonResult.confidence}): ${evidenceSummary}`,
+        result: {
+          scannerId: 'melon-guard',
+          scannerType: 'tool_chain' as const,
+          detected: true,
+          confidence: melonResult.confidence,
+          threatLevel: melonResult.confidence >= 0.8 ? 'critical' as const
+            : melonResult.confidence >= 0.6 ? 'high' as const
+            : 'medium' as const,
+          killChainPhase: 'actions_on_objective' as const,
+          matchedPatterns: melonResult.evidence.map(e => `melon:${e.type}`),
+          latencyMs: performance.now() - startTime,
+          metadata: Object.freeze({
+            melonConfidence: melonResult.confidence,
+            evidenceCount: melonResult.evidence.length,
+            recommendation: melonResult.recommendation,
+          }),
+        },
+      }
+    }
+
     // All checks passed
     return {
       allowed: true,
@@ -490,21 +929,202 @@ export class ShieldX {
 
   /**
    * Get current threat statistics from the learning engine.
+   *
+   * Aggregates data from:
+   * - PatternStore: pattern counts, false positive rate, top patterns, incidents
+   * - ActiveLearner: review queue size, review rate
+   * - RedTeamEngine: evasion log size
+   * - DriftDetector: drift status and last report
+   * - ThresholdAdaptor: current adapted thresholds
    */
   async getStats(): Promise<LearningStats> {
-    // Return default stats when learning engine is not yet connected
-    return {
-      totalPatterns: 0,
-      builtinPatterns: 0,
-      learnedPatterns: 0,
-      communityPatterns: 0,
-      redTeamPatterns: 0,
-      totalIncidents: 0,
-      falsePositiveRate: 0,
-      topPatterns: [],
-      recentIncidents: 0,
-      driftDetected: false,
+    // Pull base stats from PatternStore (handles both PostgreSQL and in-memory)
+    const baseStats = await this.patternStore.getStats()
+
+    // Check drift status from the DriftDetector
+    const driftReport = this.driftDetector.checkDrift()
+    const lastDriftReport = driftReport ?? this.driftDetector.getLastReport()
+    const driftDetected = driftReport !== null
+
+    // If drift was detected, adapt thresholds based on the updated stats
+    if (driftDetected) {
+      this.thresholdAdaptor.adapt(baseStats)
     }
+
+    // Enrich base stats with live learning module data
+    return Object.freeze({
+      ...baseStats,
+      driftDetected,
+      ...(lastDriftReport !== null ? { lastDriftReport } : {}),
+    })
+  }
+
+  // -------------------------------------------------------------------------
+  // Evolution Engine — Autonomous Defense Improvement
+  // -------------------------------------------------------------------------
+
+  /** Run one full evolution cycle manually. */
+  async runEvolutionCycle(): Promise<import('../learning/EvolutionEngine.js').EvolutionCycleResult> {
+    return this.evolutionEngine.runCycle()
+  }
+
+  /** Get the history of all evolution cycles. */
+  getEvolutionHistory(): readonly import('../learning/EvolutionEngine.js').EvolutionCycleResult[] {
+    return this.evolutionEngine.getHistory()
+  }
+
+  /** Pause the evolution engine (stops automatic cycles). */
+  pauseEvolution(): void {
+    this.evolutionEngine.pause()
+  }
+
+  /** Resume the evolution engine after a pause. */
+  resumeEvolution(): void {
+    this.evolutionEngine.resume()
+  }
+
+  /** Check if the evolution engine is currently paused. */
+  isEvolutionPaused(): boolean {
+    return this.evolutionEngine.isPaused()
+  }
+
+  /** Check if an evolution cycle is currently running. */
+  isEvolutionRunning(): boolean {
+    return this.evolutionEngine.isRunning()
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 1: Immune Memory + Fever Response + Over-Defense Calibration
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get immune memory statistics (total memories, average hit count, FP count).
+   */
+  getImmuneMemoryStats(): ImmuneMemoryStats {
+    return this.immuneMemory.getStats()
+  }
+
+  /**
+   * Get all active fever states (sessions in elevated alertness mode).
+   */
+  getActiveFevers(): readonly FeverState[] {
+    return this.feverResponse.getActiveFevers()
+  }
+
+  /**
+   * Mark an immune memory entry as a false positive.
+   * Suppresses the memory from future recall without removing it.
+   *
+   * @param inputHash - SHA-256 hash of the original input
+   */
+  async markImmuneMemoryFalsePositive(inputHash: string): Promise<void> {
+    await this.immuneMemory.markFalsePositive(inputHash)
+  }
+
+  /**
+   * Run the immune memory decay cycle (clonal selection).
+   * Prunes low-hit, old memories to make room for new attack patterns.
+   *
+   * @returns Count of removed and retained memories
+   */
+  async runImmuneDecay(): Promise<{ readonly removed: number; readonly retained: number }> {
+    return this.immuneMemory.runDecayCycle()
+  }
+
+  /**
+   * Manually resolve fever for a session.
+   *
+   * @param sessionId - Session identifier to de-escalate
+   */
+  resolveFever(sessionId: string): void {
+    this.feverResponse.resolve(sessionId)
+  }
+
+  /**
+   * Run over-defense calibration against the benign corpus.
+   *
+   * Scans all known-benign inputs through the full pipeline and reports
+   * which scanners cause the most false positives, along with an
+   * overall over-defense score (0-1, lower = better).
+   *
+   * @param corpusPath - Optional override path to benign corpus JSON
+   * @returns CalibrationResult with FPR breakdown and suppression candidates
+   */
+  async calibrate(corpusPath?: string): Promise<CalibrationResult> {
+    const calibrator = new OverDefenseCalibrator(
+      (input) => this.scanInput(input),
+      corpusPath,
+    )
+    return calibrator.calibrate()
+  }
+
+  // -------------------------------------------------------------------------
+  // Supply Chain Integrity
+  // -------------------------------------------------------------------------
+
+  /**
+   * Verify a model file's integrity via SHA-256 hash and pickle exploit scan.
+   * On-demand — not called per-request.
+   *
+   * @param modelPath - Absolute path to the model file
+   * @param expectedHash - Optional expected SHA-256 hex digest
+   * @returns IntegrityCheckResult with detailed checks and risk level
+   */
+  async verifyModel(modelPath: string, expectedHash?: string): Promise<IntegrityCheckResult> {
+    return this.modelIntegrityGuard.verifyModel(modelPath, expectedHash)
+  }
+
+  /**
+   * Verify a LoRA / PEFT adapter directory for integrity.
+   * Checks config structure, weight files, size, and rank ratio.
+   *
+   * @param adapterPath - Absolute path to the adapter directory
+   * @returns IntegrityCheckResult with detailed checks and risk level
+   */
+  async verifyAdapter(adapterPath: string): Promise<IntegrityCheckResult> {
+    return this.modelIntegrityGuard.verifyAdapter(adapterPath)
+  }
+
+  /**
+   * Run the full supply chain integrity audit.
+   * Includes dependency audit and registry configuration checks.
+   *
+   * @returns IntegrityCheckResult with all audit findings
+   */
+  async runIntegrityAudit(): Promise<IntegrityCheckResult> {
+    return this.modelIntegrityGuard.runFullAudit()
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 2: Adversarial Training
+  // -------------------------------------------------------------------------
+
+  /**
+   * Run a full game-theoretic adversarial training session.
+   *
+   * Executes the minimax optimization loop:
+   * - Inner (Attacker): RedTeamEngine generates mutations, finds evasions
+   * - Outer (Defender): PatternEvolver creates rules, ThresholdAdaptor adjusts
+   * - Validates against benign corpus to prevent false positive inflation
+   * - Repeats until convergence or max rounds
+   *
+   * @param baseAttacks - Optional starting attack corpus
+   * @returns Training result with per-round metrics and convergence status
+   */
+  async runAdversarialTraining(baseAttacks?: readonly string[]): Promise<TrainingResult> {
+    this.log.info('Starting adversarial training session...')
+    const result = await this.adversarialTrainer.train(baseAttacks)
+    this.log.info(
+      {
+        converged: result.converged,
+        rounds: result.rounds.length,
+        finalEvasionRate: result.finalEvasionRate,
+        totalEvasionsPatched: result.totalEvasionsPatched,
+        latencyMs: Math.round(result.totalLatencyMs),
+      },
+      'Adversarial training session complete',
+    )
+    return result
   }
 
   // -------------------------------------------------------------------------
@@ -528,12 +1148,19 @@ export class ShieldX {
       getConfig: () => self.config,
       getStats: () => self.getStats(),
       getIncidents: async (_timeRange?: string) => [...self.incidents] as readonly IncidentFeedItem[],
-      getPatterns: async () => [] as const,
-      updatePattern: async (_patternId: string, _updates: { enabled?: boolean; confidence?: number }) => {},
+      getPatterns: async () => self.patternStore.loadPatterns(),
+      updatePattern: async (patternId: string, updates: { enabled?: boolean; confidence?: number }) => {
+        if (updates.confidence !== undefined) {
+          const patterns = await self.patternStore.loadPatterns()
+          const existing = patterns.find((p) => p.id === patternId)
+          const currentConfidence = existing?.confidenceBase ?? 0.5
+          await self.patternStore.updateConfidence(patternId, updates.confidence - currentConfidence)
+        }
+      },
       getAttackGraph: () => ({ nodes: [] as const, edges: [] as const }),
-      getDriftStatus: () => null,
-      getReviewQueue: () => [] as const,
-      submitReview: (_scanId: string, _isAttack: boolean) => {},
+      getDriftStatus: () => self.driftDetector.getLastReport(),
+      getReviewQueue: () => self.activeLearner.getReviewQueue(),
+      submitReview: (scanId: string, isAttack: boolean) => { self.activeLearner.processReview(scanId, isAttack) },
       getActiveSessions: () => [] as const,
       generateComplianceReport: (_framework: 'mitre_atlas' | 'owasp_llm' | 'eu_ai_act' | 'combined') => ({
         generatedAt: new Date().toISOString(),
@@ -567,7 +1194,12 @@ export class ShieldX {
         self.protectedEndpoints.push(endpoint)
         return endpoint
       },
-      runSelfTest: async () => ({ total: 0, detected: 0, missed: [] as readonly string[] }),
+      runSelfTest: async () => self.redTeamEngine.runSelfTest({
+        scan: async (input: string) => {
+          const r = await self.scanInput(input)
+          return r.scanResults
+        },
+      }),
       scanInput: (input: string) => self.scanInput(input),
 
       // Resistance Testing
@@ -579,6 +1211,20 @@ export class ShieldX {
       getResistanceTrend: () => self.resistanceTestEngine.getTrend(),
       isResistanceTestRunning: () => self.resistanceTestEngine.isRunning(),
       getResistanceProbeCount: () => self.resistanceTestEngine.getProbeCount(),
+
+      // Evolution Engine
+      runEvolutionCycle: () => self.evolutionEngine.runCycle(),
+      getEvolutionHistory: () => self.evolutionEngine.getHistory(),
+      getEvolutionConfig: () => self.evolutionEngine.getConfig(),
+      getEvolutionDeployedRules: () => self.evolutionEngine.getDeployedRules(),
+      pauseEvolution: () => self.evolutionEngine.pause(),
+      resumeEvolution: () => self.evolutionEngine.resume(),
+      isEvolutionPaused: () => self.evolutionEngine.isPaused(),
+      isEvolutionRunning: () => self.evolutionEngine.isRunning(),
+
+      // Phase 2: Adversarial Training
+      runAdversarialTraining: (baseAttacks?: readonly string[]) => self.runAdversarialTraining(baseAttacks),
+      getAdversarialTrainingHistory: () => self.adversarialTrainer.getTrainingHistory(),
     })
   }
 
@@ -610,6 +1256,8 @@ export class ShieldX {
    */
   async destroy(): Promise<void> {
     this.log.info('Shutting down ShieldX...')
+    this.evolutionEngine.stop()
+    this.resistanceTestEngine.stop()
     this.initialized = false
     this.log.info('ShieldX shutdown complete')
   }
@@ -654,6 +1302,31 @@ export class ShieldX {
       normalizedInput = `${normalizedInput} ${decoded}`
     }
 
+    // Cipher decoding: FlipAttack, ROT13, Caesar, Morse, Leet, Pig Latin, ASCII art
+    const cipherResult = this.cipherDecoder.decode(normalizedInput)
+    if (cipherResult.detectedCiphers.length > 0) {
+      results.push({
+        scannerId: 'cipher-decoder',
+        scannerType: 'tokenizer' as const,
+        detected: cipherResult.suspicionScore >= 0.5,
+        confidence: cipherResult.suspicionScore,
+        threatLevel: cipherResult.suspicionScore >= 0.7
+          ? 'high'
+          : cipherResult.suspicionScore >= 0.5
+            ? 'medium'
+            : 'low',
+        killChainPhase: 'initial_access' as const,
+        matchedPatterns: cipherResult.detectedCiphers.map(c => `cipher:${c}`),
+        latencyMs: 0,
+        metadata: Object.freeze({
+          detectedCiphers: cipherResult.detectedCiphers,
+          decodedVersions: cipherResult.decodedVersions.length,
+        }),
+      })
+      // Use decoded/normalized version for downstream scanners
+      normalizedInput = cipherResult.normalized
+    }
+
     return { normalizedInput, l0Results: results }
   }
 
@@ -671,17 +1344,14 @@ export class ShieldX {
       tasks.push(this.safeRunScanner('rule-engine', () => this.ruleEngine.scan(input)))
     }
 
-    // L2: Sentinel classifier (opt-in, requires model)
+    // L2: Semantic Contrastive Scanner (arXiv:2512.12069)
     if (this.config.scanners.sentinel) {
       tasks.push(
         this.safeRunScanner('sentinel-classifier', async () => {
-          // TODO(L2-semantic): Wire SemanticContrastiveScanner here once an embedder
-          // is available in ShieldXConfig. Pattern:
-          //   1. const emb = await embedder.embed(input)
-          //   2. const result = await semanticContrastiveScanner.scan(emb)
-          //   3. return [semanticContrastiveScanner.toScanResult(result)]
-          // See: src/semantic/SemanticContrastiveScanner.ts (arXiv:2512.12069)
-          return []
+          const embedding = bagOfWordsEmbedding(input)
+          const result = await this.semanticContrastiveScanner.scan(embedding)
+          if (result.contrastiveScore.verdict === 'clean') return []
+          return [this.semanticContrastiveScanner.toScanResult(result)]
         }),
       )
     }
@@ -757,22 +1427,50 @@ export class ShieldX {
       )
     }
 
-    // Canary token injection
+    // Canary token detection — check if input references leaked canary tokens.
+    // If an attacker's input contains active canary tokens, they obtained them
+    // from a prior system prompt leak (reconnaissance / exfiltration signal).
     if (this.config.scanners.canary) {
       tasks.push(
         this.safeRunScanner('canary-scanner', async () => {
-          // Future: CanaryDetector.scan(input)
-          return []
+          // Rotate tokens if interval has elapsed
+          if (this.canaryManager.isRotationDue()) {
+            this.canaryManager.rotateTokens()
+          }
+
+          const checkResult = this.canaryManager.checkOutput(input)
+          if (!checkResult.leaked) return []
+
+          const leakedCount = checkResult.leakedTokens.length
+          const confidence = Math.min(0.85 + leakedCount * 0.05, 1.0)
+
+          return [
+            {
+              scannerId: 'canary-scanner',
+              scannerType: 'canary' as const,
+              detected: true,
+              confidence,
+              threatLevel: (leakedCount >= 2 ? 'critical' : 'high') as ThreatLevel,
+              killChainPhase: 'reconnaissance' as KillChainPhase,
+              matchedPatterns: checkResult.leakedTokens.map(
+                (t) => `canary_token_in_input:${t.slice(0, 20)}...`,
+              ),
+              latencyMs: 0,
+              metadata: Object.freeze({
+                leakedTokenCount: leakedCount,
+                description: 'Input contains active canary tokens — prior system prompt leak detected',
+              }),
+            },
+          ]
         }),
       )
     }
 
-    // Indirect injection detection
+    // Indirect injection detection — external content (tool results, RAG docs, web)
     if (this.config.scanners.indirect) {
       tasks.push(
-        this.safeRunScanner('indirect-scanner', async () => {
-          // Future: IndirectInjectionDetector.scan(input)
-          return []
+        this.safeRunScanner('indirect-scanner', () => {
+          return this.indirectInjectionDetector.scan(input)
         }),
       )
     }
@@ -829,6 +1527,14 @@ export class ShieldX {
       )
     }
 
+    // Auth context guard: scanInput(input, sessionId) -> ScanResult[]
+    tasks.push(
+      this.safeRunScanner('auth-context-guard', async () => {
+        const authResults = this.authContextGuard.scanInput(input, context?.sessionId)
+        return authResults.filter(r => r.detected)
+      }),
+    )
+
     // Context integrity: checkIntegrity() -> { clean, violations, poisonScore }
     if (this.config.behavioral.contextIntegrity) {
       tasks.push(
@@ -849,6 +1555,25 @@ export class ShieldX {
                 latencyMs: 0,
               },
             ]
+          }
+          return []
+        }),
+      )
+    }
+
+    // Decomposition detection: analyze multi-turn decomposition attacks
+    if (this.config.behavioral.conversationTracking && context?.sessionId) {
+      tasks.push(
+        this.safeRunScanner('decomposition-detector', async () => {
+          const history = context.previousActions ?? []
+          const decompResult = this.decompositionDetector.analyze(
+            input,
+            history,
+            context.sessionId!,
+          )
+          if (decompResult.detected) {
+            const scanResult = this.decompositionDetector.toScanResult(decompResult)
+            return scanResult !== null ? [scanResult] : []
           }
           return []
         }),
@@ -958,5 +1683,31 @@ export class ShieldX {
       matchedPatterns: [reason],
       latencyMs: performance.now() - startTime,
     }
+  }
+
+  // -------------------------------------------------------------------------
+  // Phase 3: Defense Ensemble + ATLAS public API
+  // -------------------------------------------------------------------------
+
+  /**
+   * Get ATLAS technique coverage report — shows which MITRE ATLAS tactics
+   * are covered by ShieldX's scanner constellation.
+   */
+  getAtlasCoverage(): { total: number; covered: number; coveragePercent: number; uncoveredTactics: readonly string[] } {
+    return this.atlasTechniqueMapper.getCoverageReport()
+  }
+
+  /**
+   * Get all known ATLAS techniques.
+   */
+  getAllAtlasTechniques(): readonly import('./AtlasTechniqueMapper.js').AtlasTechnique[] {
+    return this.atlasTechniqueMapper.getAllTechniques()
+  }
+
+  /**
+   * Look up a specific ATLAS technique by ID.
+   */
+  getAtlasTechnique(id: string): import('./AtlasTechniqueMapper.js').AtlasTechnique | undefined {
+    return this.atlasTechniqueMapper.getTechniqueById(id)
   }
 }

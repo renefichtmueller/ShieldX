@@ -135,4 +135,21 @@ export const defaultConfig: ShieldXConfig = {
     structured: true,
     incidentLog: true,
   },
+
+  supplyChain: {
+    enabled: true,
+    maxAdapterSizeMB: 500,
+    enableDependencyAudit: false,
+    runAuditOnStartup: false,
+  },
+
+  evolution: {
+    enabled: false,
+    cycleIntervalMs: 21_600_000,       // 6 hours
+    maxFPRIncrease: 0.005,             // 0.5%
+    benignCorpusMinSize: 50,
+    autoDeployThreshold: 0.99,         // 99% benign pass rate
+    maxRulesPerCycle: 10,
+    rollbackWindowMs: 3_600_000,       // 1 hour
+  },
 } as const satisfies ShieldXConfig

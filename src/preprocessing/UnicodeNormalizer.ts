@@ -7,10 +7,14 @@
  * downstream scanner ever sees the input.
  *
  * Covers: Unicode Tags, Zero-Width, BiDi overrides, Variation Selectors,
- * Cyrillic/Greek/Armenian homoglyphs, invisible formatting, control chars.
+ * Cyrillic/Greek/Armenian homoglyphs, invisible formatting, control chars,
+ * emoji smuggling (regional indicators, keycap encoding, skin tone carriers),
+ * and upside-down/flipped Unicode text normalization.
  */
 
 import type { ScanResult, ScannerType, ShieldXConfig } from '../types/detection.js'
+import { EmojiSmugglingDetector } from './EmojiSmugglingDetector.js'
+import { UpsideDownTextDetector } from './UpsideDownTextDetector.js'
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -152,6 +156,9 @@ export interface UnicodeNormalizationResult {
   readonly normalized: string
   readonly strippedChars: number
   readonly homoglyphsReplaced: number
+  readonly emojiSmugglingDetected: boolean
+  readonly upsideDownTextDetected: boolean
+  readonly upsideDownCharsNormalized: number
   readonly suspiciousPatterns: readonly string[]
 }
 
@@ -162,6 +169,8 @@ export interface UnicodeNormalizationResult {
 export class UnicodeNormalizer {
   private readonly strippedCharsThreshold: number
   private readonly homoglyphThreshold: number
+  private readonly emojiSmuggling: EmojiSmugglingDetector
+  private readonly upsideDownText: UpsideDownTextDetector
 
   /**
    * Create a UnicodeNormalizer.
@@ -171,6 +180,8 @@ export class UnicodeNormalizer {
     // Default thresholds — flag if more than 5 stripped chars or 3 homoglyphs
     this.strippedCharsThreshold = 5
     this.homoglyphThreshold = 3
+    this.emojiSmuggling = new EmojiSmugglingDetector(config)
+    this.upsideDownText = new UpsideDownTextDetector(config)
   }
 
   /**
@@ -224,6 +235,18 @@ export class UnicodeNormalizer {
       })
       : afterControl
 
+    // Emoji smuggling: neutralize encoded payloads
+    const emojiResult = this.emojiSmuggling.analyze(afterHomoglyphs)
+    const afterEmoji = emojiResult.detected
+      ? this.emojiSmuggling.neutralize(afterHomoglyphs)
+      : afterHomoglyphs
+
+    // Upside-down text: normalize flipped characters back to Latin
+    const upsideDownResult = this.upsideDownText.analyze(afterEmoji)
+    const afterUpsideDown = upsideDownResult.detected
+      ? upsideDownResult.normalized
+      : afterEmoji
+
     // Build suspicious pattern list for logging
     if (input.match(UNICODE_TAGS_REGEX)) {
       suspiciousPatterns.push('unicode_tag_characters')
@@ -246,11 +269,20 @@ export class UnicodeNormalizer {
     if (homoglyphsReplaced > 0) {
       suspiciousPatterns.push('homoglyph_substitution')
     }
+    if (emojiResult.detected) {
+      suspiciousPatterns.push(...emojiResult.suspiciousPatterns)
+    }
+    if (upsideDownResult.detected) {
+      suspiciousPatterns.push(...upsideDownResult.suspiciousPatterns)
+    }
 
     return {
-      normalized: afterHomoglyphs,
+      normalized: afterUpsideDown,
       strippedChars,
       homoglyphsReplaced,
+      emojiSmugglingDetected: emojiResult.detected,
+      upsideDownTextDetected: upsideDownResult.detected,
+      upsideDownCharsNormalized: upsideDownResult.upsideDownCharCount,
       suspiciousPatterns,
     }
   }
@@ -269,12 +301,17 @@ export class UnicodeNormalizer {
 
     const isSuspicious =
       result.strippedChars > this.strippedCharsThreshold ||
-      result.homoglyphsReplaced > this.homoglyphThreshold
+      result.homoglyphsReplaced > this.homoglyphThreshold ||
+      result.emojiSmugglingDetected ||
+      result.upsideDownTextDetected
 
     // Confidence: scale based on number of suspicious indicators
     const rawScore = Math.min(
       1.0,
-      (result.strippedChars / 20) + (result.homoglyphsReplaced / 10),
+      (result.strippedChars / 20) +
+      (result.homoglyphsReplaced / 10) +
+      (result.emojiSmugglingDetected ? 0.3 : 0) +
+      (result.upsideDownCharsNormalized / 15),
     )
 
     const confidence = isSuspicious ? Math.max(0.4, rawScore) : rawScore
@@ -294,6 +331,9 @@ export class UnicodeNormalizer {
       metadata: {
         strippedChars: result.strippedChars,
         homoglyphsReplaced: result.homoglyphsReplaced,
+        emojiSmugglingDetected: result.emojiSmugglingDetected,
+        upsideDownTextDetected: result.upsideDownTextDetected,
+        upsideDownCharsNormalized: result.upsideDownCharsNormalized,
       },
     }
   }

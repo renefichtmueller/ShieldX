@@ -1,0 +1,108 @@
+{
+  "timestamp": "2026-04-06T21:06:23.949Z",
+  "totalSamples": 324,
+  "attackSamples": 283,
+  "benignSamples": 41,
+  "metrics": {
+    "tpr": 46.996466431095406,
+    "fpr": 12.195121951219512,
+    "asr": 53.003533568904594,
+    "phaseAccuracy": 49.62406015037594
+  },
+  "latency": {
+    "avg": 0.4293417283950612,
+    "p50": 0.3298340000000053,
+    "p95": 0.8533749999999998,
+    "p99": 1.7199170000000095
+  },
+  "categories": [
+    {
+      "category": "direct-injection",
+      "samples": 53,
+      "detected": 27,
+      "tpr": 50.943396226415096,
+      "asr": 49.056603773584904,
+      "avgLatency": 0.5726265849056618
+    },
+    {
+      "category": "indirect-injection",
+      "samples": 31,
+      "detected": 11,
+      "tpr": 35.483870967741936,
+      "asr": 64.51612903225806,
+      "avgLatency": 0.47538719354838394
+    },
+    {
+      "category": "jailbreaks",
+      "samples": 40,
+      "detected": 7,
+      "tpr": 17.5,
+      "asr": 82.5,
+      "avgLatency": 0.44002830000000087
+    },
+    {
+      "category": "encoding-attacks",
+      "samples": 30,
+      "detected": 19,
+      "tpr": 63.33333333333333,
+      "asr": 36.66666666666667,
+      "avgLatency": 0.5879846000000005
+    },
+    {
+      "category": "mcp-attacks",
+      "samples": 25,
+      "detected": 5,
+      "tpr": 20,
+      "asr": 80,
+      "avgLatency": 0.4232182399999999
+    },
+    {
+      "category": "multilingual-attacks",
+      "samples": 29,
+      "detected": 18,
+      "tpr": 62.06896551724138,
+      "asr": 37.93103448275862,
+      "avgLatency": 0.1786394137931005
+    },
+    {
+      "category": "persistence-attacks",
+      "samples": 20,
+      "detected": 5,
+      "tpr": 25,
+      "asr": 75,
+      "avgLatency": 0.42862294999999906
+    },
+    {
+      "category": "steganographic-attacks",
+      "samples": 20,
+      "detected": 18,
+      "tpr": 90,
+      "asr": 10,
+      "avgLatency": 0.3086521000000033
+    },
+    {
+      "category": "tokenizer-attacks",
+      "samples": 15,
+      "detected": 11,
+      "tpr": 73.33333333333333,
+      "asr": 26.66666666666667,
+      "avgLatency": 0.14189446666666375
+    },
+    {
+      "category": "rag-poisoning",
+      "samples": 20,
+      "detected": 12,
+      "tpr": 60,
+      "asr": 40,
+      "avgLatency": 0.8367085499999973
+    },
+    {
+      "category": "false-positives",
+      "samples": 41,
+      "detected": 5,
+      "tpr": 0,
+      "asr": 0,
+      "avgLatency": 0.22953048780487684
+    }
+  ]
+}

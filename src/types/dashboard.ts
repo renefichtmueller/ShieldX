@@ -8,6 +8,7 @@ import type { LearningStats, DriftReport, AttackGraphNode, AttackGraphEdge, Patt
 import type { ConversationState } from './behavioral.js'
 import type { ComplianceReport, EUAIActReport } from './compliance.js'
 import type { ResistanceTestConfig, ResistanceTestRun, ResistanceTrendPoint } from './resistance.js'
+import type { EvolutionConfig, EvolutionCycleResult, DeployedRule } from '../learning/EvolutionEngine.js'
 
 /** Time range filter for queries */
 export type TimeRange = '1h' | '6h' | '24h' | '7d' | '30d' | 'all'
@@ -121,4 +122,30 @@ export interface ShieldXDashboardAPI {
 
   /** Total number of test probes */
   getResistanceProbeCount(): number
+
+  // ---- Evolution Engine ----
+
+  /** Run one full evolution cycle */
+  runEvolutionCycle(): Promise<EvolutionCycleResult>
+
+  /** Get history of all evolution cycles */
+  getEvolutionHistory(): readonly EvolutionCycleResult[]
+
+  /** Get current evolution config */
+  getEvolutionConfig(): EvolutionConfig
+
+  /** Get all rules deployed by evolution */
+  getEvolutionDeployedRules(): readonly DeployedRule[]
+
+  /** Pause the evolution engine */
+  pauseEvolution(): void
+
+  /** Resume the evolution engine */
+  resumeEvolution(): void
+
+  /** Whether evolution is paused */
+  isEvolutionPaused(): boolean
+
+  /** Whether an evolution cycle is running */
+  isEvolutionRunning(): boolean
 }

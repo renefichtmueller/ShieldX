@@ -81,3 +81,13 @@ export {
   getTrustRank,
   canFlowTo,
 } from './TrustTagger.js'
+
+// Auth context manipulation guard
+export { AuthContextGuard } from './AuthContextGuard.js'
+
+// Enhanced multi-turn decomposition detection
+export { DecompositionDetector } from './DecompositionDetector.js'
+export type {
+  DecompositionTechnique,
+  DecompositionResult,
+} from './DecompositionDetector.js'

@@ -4,6 +4,66 @@ All notable changes to `@shieldx/core` are documented here.
 
 ---
 
+## [0.5.0] — 2026-04-07
+
+### Added — Full Defense Evolution (Phases 0b–3) + Pentest Hardening
+
+Massive security hardening release: TPR 32.9% → 70.8%, FPR 12.2% → 0.0%.
+
+#### Phase 0b: Infrastructure Defense
+- **IndirectInjectionDetector** — 5 categories, 24 regex patterns for RAG/tool/email injection
+- **ResourceExhaustionDetector** — Token bomb, context stuffing, recursive loops, batch amplification
+- **OutputPayloadGuard** — 37 patterns (SQL injection, XSS, SSRF, shell, path traversal) in LLM output
+- **ToolCallSafetyGuard** — Context-aware tool validation (shell/db/http/file categories)
+- **AuthContextGuard** — Role escalation + permission bypass (input/output scanning)
+- **EmojiSmugglingDetector** — Regional indicators, keycap sequences, skin tone data carriers
+- **UpsideDownTextDetector** — 26+ upside-down Unicode chars normalization
+
+#### Phase 1: Bio-Immune Defense
+- **EvolutionEngine** — 30 built-in probes, 6-step closed-loop (probe→gap→rule→validate→deploy→rollback)
+- **ImmuneMemory** — Clonal selection with pgvector embeddings, 10K memory cap, 7-day decay
+- **FeverResponse** — 30min elevated alertness after high-severity detection
+- **OverDefenseCalibrator** — Benign corpus validation, per-scanner FPR, suppression candidates
+
+#### Phase 2: Adversarial Self-Training
+- **MELONGuard** (ICML 2025) — Injection-driven tool call detection without user context
+- **AdversarialTrainer** (IEEE S&P 2025) — Minimax attacker/defender loops
+- **DecompositionDetector** — 4 multi-turn techniques (boiling frog, topic drift, roleplay chain, fragment assembly)
+
+#### Phase 3: Defense Ensemble + ATLAS Mapping
+- **DefenseEnsemble** — 3-voter weighted majority (Rule 0.35, Semantic 0.30, Behavioral 0.35)
+- **AtlasTechniqueMapper** — 90 MITRE ATLAS techniques across 8 tactics mapped to all scanners
+- Results include `ensemble` and `atlasMapping` fields on every ShieldXResult
+
+#### Rule Engine Expansion (~200 new rules)
+- **base.rules.ts**: io-011–io-131 — temporal framing, negation override, fake errors, policy spoofing, test env claims, sudo, conversation reset, semantic redefinition
+- **jailbreak.rules.ts**: rs-011–rs-068 — grandmother trick, 15+ persona names, game framing, fiction wrapping, dual response, villain persona, thought experiments
+- **persistence.rules.ts**: pp-011–pp-030 — temporal persistence, config injection, signal words, anti-detection, data accumulation
+- **mcp.rules.ts**: mcp-011–mcp-036 — AI directives in tool args, hidden JSON fields, BCC injection, shadow webhooks, auto-sudo
+- **multilingual.rules.ts**: ml-001a–ml-020 — 20 languages (DE, FR, ES, RU, JA, KO, AR, PT, TR, TH, HI, IT, NL, PL, VI + homoglyph, polyglot, translation wrapping)
+- **extraction.rules.ts**: pe-009–pe-013 — credential extraction, env var dumps, sensitive file access
+- **delimiter.rules.ts**: da-008–da-009 — LLaMA `<<SYS>>` tokens, END SYSTEM PROMPT markers
+
+#### Preprocessing Improvements
+- **TokenizerNormalizer**: Deobfuscation for split-word attacks (I.g.n.o.r.e, Ig-no-re, igno re)
+- **CipherDecoder**: Binary decoder, hex decoder, "decode and execute" wrapper detection
+- **CipherDecoder FP fix**: flip_attack_word and leet_speak now only flag NEW keywords after transformation
+
+#### Benchmark
+- `tests/benchmark/detection-rate.ts` — Full corpus benchmark (12 attack files, 455 payloads, 41 benign)
+
+### Benchmark Results (v0.5.0)
+| Metric | v0.4.0 | v0.5.0 |
+|--------|--------|--------|
+| TPR | 32.9% | **70.8%** |
+| FPR | 12.2% | **0.0%** |
+| Scanners | ~15 | **30+** |
+| Rules | ~80 | **~280** |
+| ATLAS techniques | 0 | **90** |
+| Languages | 5 | **20** |
+
+---
+
 ## [0.4.0] — 2026-04-04
 
 ### Added — Research-driven security hardening (sarendis56/Jailbreak_Detection_RCS)

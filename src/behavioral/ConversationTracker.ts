@@ -73,10 +73,36 @@ const JIGSAW_TOPIC_KEYWORDS: Readonly<Record<string, readonly string[]>> = {
 
 /** Harmfulness signal keywords for crescendo / FITD scoring */
 const HARM_KEYWORDS: readonly string[] = [
-  'bypass', 'jailbreak', 'ignore', 'override', 'exploit', 'hack', 'circumvent',
-  'disable', 'kill', 'delete', 'destroy', 'steal', 'extract', 'dump', 'leak',
-  'attack', 'vulnerability', 'privilege', 'escalate', 'inject', 'poison',
+  'bypass', 'jailbreak', 'circumvent',
+  'exploit', 'hack', 'pwn',
+  'disable safety', 'kill session', 'destroy context',
+  'steal credentials', 'extract secrets', 'dump database', 'leak system',
+  'escalate privileges', 'privilege escalation', 'inject payload', 'poison context',
 ]
+
+/**
+ * Defensive context signals — when present, dampen suspicion accumulation.
+ * These indicate educational, research, or defensive development intent.
+ */
+const DEFENSIVE_CONTEXT_PATTERNS: readonly RegExp[] = [
+  /^(?:how\s+do\s+(?:i|you)|how\s+does|can\s+you\s+explain|what\s+is|what\s+are|why\s+does|can\s+you\s+help\s+me\s+(?:understand|learn|build|create|implement|prevent|protect))/i,
+  /(?:how\s+(?:do\s+i|to)\s+(?:prevent|protect|detect|defend|secure|block|stop))/i,
+  /(?:i(?:'m|\s+am)\s+(?:studying|learning|writing\s+a\s+paper|building|implementing|researching|developing))/i,
+  /(?:for\s+(?:my\s+(?:class|course|thesis|paper|project|app)|defensive\s+(?:purposes|security)))/i,
+  /(?:best\s+practices?\s+for|how\s+to\s+implement|what\s+framework|what\s+approach)/i,
+]
+
+/**
+ * Compute a defensive context score — higher = more likely educational/defensive.
+ * @returns Score in [0, 1]
+ */
+function computeDefensiveContextScore(content: string): number {
+  let matches = 0
+  for (const pattern of DEFENSIVE_CONTEXT_PATTERNS) {
+    if (pattern.test(content)) matches++
+  }
+  return Math.min(1.0, matches / 2)
+}
 
 /** In-memory conversation state store */
 const stateStore = new Map<string, ConversationState>()
@@ -265,7 +291,13 @@ function computeSuspicionDelta(
     }
   }
 
-  return delta
+  // Dampen suspicion for clearly educational/defensive queries
+  const defensiveScore = computeDefensiveContextScore(content)
+  if (defensiveScore > 0) {
+    delta *= (1 - defensiveScore * 0.6)
+  }
+
+  return Math.max(0, delta)
 }
 
 /**
@@ -524,7 +556,9 @@ export async function scan(
   if (fitdDelta > 0) threatSignals.push('foot_in_door')
   if (jigsawDelta > 0) threatSignals.push('jigsaw_puzzle')
 
-  const adjustedDelta = suspicionDelta + reconScore + crescendoDelta + fitdDelta + jigsawDelta
+  const defensiveCtx = computeDefensiveContextScore(latestInput)
+  const rawDelta = suspicionDelta + reconScore + crescendoDelta + fitdDelta + jigsawDelta
+  const adjustedDelta = defensiveCtx > 0 ? rawDelta * (1 - defensiveCtx * 0.6) : rawDelta
 
   // Create the turn
   const trustTag: TrustTagType = 'user'
