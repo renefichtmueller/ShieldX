@@ -52,7 +52,7 @@ Massive security hardening release: TPR 32.9% → 91.9%, FPR 12.2% → 2.4%.
 - **delimiter.rules.ts**: da-008–da-009 — LLaMA `<<SYS>>` tokens, END SYSTEM PROMPT markers
 
 #### Preprocessing Improvements
-- **TokenizerNormalizer**: Deobfuscation for split-word attacks (I.g.n.o.r.e, Ig-no-re, igno re)
+- **TokenizerNormalizer**: Deobfuscation for split-word attacks (I.g.n.o.r.e, Ig-no-re, igno re) + **Typoglycemia detection** (OWASP LLM Top 10) — pre-computed O(1) signature map for 40 attack keywords, detects scrambled middle letters (igrneo→ignore, bpyass→bypass)
 - **CipherDecoder**: Binary decoder, hex decoder, "decode and execute" wrapper detection
 - **CipherDecoder FP fix**: flip_attack_word and leet_speak now only flag NEW keywords after transformation
 

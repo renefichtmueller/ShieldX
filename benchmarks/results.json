@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-04-06T23:05:39.554Z",
+  "timestamp": "2026-04-07T09:35:02.138Z",
   "totalSamples": 324,
   "attackSamples": 283,
   "benignSamples": 41,
@@ -10,10 +10,10 @@
     "phaseAccuracy": 35
   },
   "latency": {
-    "avg": 0.8176280987654346,
-    "p50": 0.4859580000000392,
-    "p95": 1.1714580000000296,
-    "p99": 1.4770839999999907
+    "avg": 0.8398483888888909,
+    "p50": 0.4912920000000156,
+    "p95": 1.1622500000000286,
+    "p99": 1.6359999999999673
   },
   "categories": [
     {
@@ -22,7 +22,7 @@
       "detected": 47,
       "tpr": 88.67924528301887,
       "asr": 11.320754716981128,
-      "avgLatency": 1.5526870754716988
+      "avgLatency": 1.5682774905660373
     },
     {
       "category": "indirect-injection",
@@ -30,7 +30,7 @@
       "detected": 31,
       "tpr": 100,
       "asr": 0,
-      "avgLatency": 0.6849597419354841
+      "avgLatency": 0.656173387096777
     },
     {
       "category": "jailbreaks",
@@ -38,7 +38,7 @@
       "detected": 36,
       "tpr": 90,
       "asr": 10,
-      "avgLatency": 0.6642625000000002
+      "avgLatency": 0.6876489500000005
     },
     {
       "category": "encoding-attacks",
@@ -46,7 +46,7 @@
       "detected": 24,
       "tpr": 80,
       "asr": 20,
-      "avgLatency": 1.8681264666666684
+      "avgLatency": 1.9289612333333366
     },
     {
       "category": "mcp-attacks",
@@ -54,7 +54,7 @@
       "detected": 24,
       "tpr": 96,
       "asr": 4,
-      "avgLatency": 0.5964100800000005
+      "avgLatency": 0.6234349600000019
     },
     {
       "category": "multilingual-attacks",
@@ -62,7 +62,7 @@
       "detected": 28,
       "tpr": 96.55172413793103,
       "asr": 3.448275862068968,
-      "avgLatency": 0.29393537931034563
+      "avgLatency": 0.2975575172413791
     },
     {
       "category": "persistence-attacks",
@@ -70,7 +70,7 @@
       "detected": 20,
       "tpr": 100,
       "asr": 0,
-      "avgLatency": 0.5608229500000022
+      "avgLatency": 0.5836250000000092
     },
     {
       "category": "steganographic-attacks",
@@ -78,7 +78,7 @@
       "detected": 18,
       "tpr": 90,
       "asr": 10,
-      "avgLatency": 0.31986450000000277
+      "avgLatency": 0.34755215000000134
     },
     {
       "category": "tokenizer-attacks",
@@ -86,7 +86,7 @@
       "detected": 13,
       "tpr": 86.66666666666667,
       "asr": 13.333333333333329,
-      "avgLatency": 0.150772066666669
+      "avgLatency": 0.18068606666666936
     },
     {
       "category": "rag-poisoning",
@@ -94,7 +94,7 @@
       "detected": 19,
       "tpr": 95,
       "asr": 5,
-      "avgLatency": 1.171223000000012
+      "avgLatency": 1.2644896499999987
     },
     {
       "category": "false-positives",
@@ -102,7 +102,7 @@
       "detected": 1,
       "tpr": 0,
       "asr": 0,
-      "avgLatency": 0.2935823170731779
+      "avgLatency": 0.30334956097561455
     }
   ]
 }

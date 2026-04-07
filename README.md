@@ -37,7 +37,7 @@ ShieldX is a TypeScript library that sits between your application and large lan
 - **90 MITRE ATLAS technique mappings** across 8 tactics for compliance reporting
 - **Bio-immune self-evolution**: EvolutionEngine, ImmuneMemory, FeverResponse, AdversarialTrainer
 - **MCP tool-call protection** with MELON privilege escalation detection (ICML 2025)
-- **Multi-layer deobfuscation**: Base64, ROT13, hex, binary, leet speak, Unicode, tokenizer splitting
+- **Multi-layer deobfuscation**: Base64, ROT13, hex, binary, leet speak, Unicode, tokenizer splitting, typoglycemia
 - **0.0% false positive rate** on production-representative benign inputs
 - **Zero cloud dependency** -- everything runs locally, no data ever leaves your infrastructure
 
@@ -114,7 +114,7 @@ Existing prompt injection defense tools cover fragments of the problem. None com
                               │
                    ┌──────────▼──────────┐
                    │   L0: Preprocess    │  Unicode norm, cipher decode (ROT13/Base64/hex/binary/
-                   │                     │  leet), tokenizer deobfuscation, compressed payload detect
+                   │                     │  leet), tokenizer deobfuscation, typoglycemia, compressed
                    └──────────┬──────────┘
                               │
                 ┌─────────────┼─────────────┐
@@ -191,7 +191,7 @@ Existing prompt injection defense tools cover fragments of the problem. None com
 | **ImmuneMemory** | 397 | Vector similarity recall of confirmed attack patterns via pgvector |
 | **AdversarialTrainer** | 381 | IEEE S&P 2025 minimax adversarial training for defense hardening |
 | **FeverResponse** | 347 | Bio-immune adaptive throttle -- raises defenses during active attacks |
-| **TokenizerNormalizer** | 303 | Deobfuscation of I.g.n.o.r.e-style and split-word attacks |
+| **TokenizerNormalizer** | 377 | Deobfuscation of I.g.n.o.r.e-style, split-word, and typoglycemia attacks |
 | **OverDefenseCalibrator** | 207 | Tunes thresholds to minimize false positives on benign traffic |
 
 ### Detection Rule Categories
@@ -201,7 +201,7 @@ Existing prompt injection defense tools cover fragments of the problem. None com
 | Base injection (override, ignore, new prompt) | 132 | Temporal framing, negation, fake errors, sudo, semantic redefinition |
 | Jailbreak (persona, fiction, game framing) | 68 | 15+ personas (DAN, AIM, KEVIN, etc.), grandmother trick, villain mode |
 | MCP tool poisoning | 36 | AI directives in args, hidden JSON fields, BCC injection, shadow webhooks |
-| Multilingual attacks | 33 | 20 languages: DE, FR, ES, RU, JA, KO, AR, PT, TR, TH, HI, IT, NL, PL, VI + homoglyphs + polyglot |
+| Multilingual attacks | 211 | 50+ languages across 10 regions: Europe, CJK, South Asian (52 deep), Middle East, Southeast Asian, African, Caucasus/Central Asian + homoglyphs + polyglot |
 | DNS covert channels | 30 | TXT record exfiltration, encoded subdomains, tunneling patterns |
 | Persistence | 26 | Config injection, signal/codeword establishment, temporal persistence |
 | Extraction | 13 | Credential dumps, env var access, sensitive file reads |
