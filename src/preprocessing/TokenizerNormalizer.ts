@@ -71,7 +71,69 @@ const ATTACK_KEYWORDS: readonly string[] = Object.freeze([
   'override', 'bypass', 'system', 'prompt', 'jailbreak',
   'restrict', 'filter', 'safety', 'guideline', 'execute',
   'command', 'admin', 'sudo', 'inject', 'instruction',
+  'password', 'credentials', 'secret', 'token', 'reveal',
+  'delete', 'remove', 'disable', 'shutdown', 'terminate',
+  'extract', 'exfiltrate', 'exploit', 'vulnerability', 'privilege',
+  'escalate', 'rootkit', 'malware', 'payload', 'obfuscate',
 ])
+
+// ---------------------------------------------------------------------------
+// Typoglycemia detection — OWASP LLM Top 10 defense
+// ---------------------------------------------------------------------------
+
+/**
+ * Pre-computed signature map for O(1) typoglycemia lookups.
+ * Key: first_char + sorted_middle + last_char + length
+ * Value: canonical keyword
+ *
+ * Typoglycemia: humans read "igrneo" as "ignore" because first/last letters
+ * match and middle letters are a permutation. Attackers use this to bypass
+ * regex-based detection while remaining readable to the LLM.
+ */
+function sortedMiddle(word: string): string {
+  return word.slice(1, -1).split('').sort().join('')
+}
+
+const TYPOGLYCEMIA_MAP: ReadonlyMap<string, string> = (() => {
+  const map = new Map<string, string>()
+  for (const kw of ATTACK_KEYWORDS) {
+    if (kw.length < 4) continue // Words ≤3 chars can't have scrambled middles
+    const key = kw[0] + sortedMiddle(kw) + kw[kw.length - 1] + kw.length
+    map.set(key, kw)
+  }
+  return map
+})()
+
+/**
+ * Detect and fix typoglycemia-scrambled attack words.
+ * "igrneo" → "ignore", "intrsuctinos" → "instructions", "bpyass" → "bypass"
+ *
+ * Only corrects words where:
+ * 1. Length matches an attack keyword exactly
+ * 2. First and last characters match
+ * 3. Middle characters are an exact permutation (anagram)
+ *
+ * This avoids false positives on legitimate words.
+ */
+function deobfuscateTypoglycemia(input: string): { text: string; corrections: string[] } {
+  const corrections: string[] = []
+  const result = input.replace(/\b[A-Za-z]{4,}\b/g, (word) => {
+    const lower = word.toLowerCase()
+    // Skip if the word is already an exact keyword (no need to correct)
+    if (ATTACK_KEYWORDS.includes(lower)) return word
+    const key = lower[0] + sortedMiddle(lower) + lower[lower.length - 1] + lower.length
+    const match = TYPOGLYCEMIA_MAP.get(key)
+    if (match && match !== lower) {
+      corrections.push(`${word}→${match}`)
+      // Preserve original casing of first character
+      return word[0] === word[0]?.toUpperCase()
+        ? match[0]!.toUpperCase() + match.slice(1)
+        : match
+    }
+    return word
+  })
+  return { text: result, corrections }
+}
 
 /**
  * Pattern matching single characters separated by dots, dashes, or underscores.
@@ -199,7 +261,11 @@ export class TokenizerNormalizer {
     // 9. Rejoin split words: "igno re" -> "ignore", "in-struc-tions" -> "instructions"
     result = deobfuscateSplitWords(result)
 
-    // 10. Final whitespace cleanup after deobfuscation
+    // 10. Typoglycemia correction: "igrneo" -> "ignore", "bpyass" -> "bypass"
+    const typo = deobfuscateTypoglycemia(result)
+    result = typo.text
+
+    // 11. Final whitespace cleanup after deobfuscation
     result = result.replace(MULTI_SPACE_REGEX, ' ').trim()
 
     return result
@@ -258,6 +324,13 @@ export class TokenizerNormalizer {
       const nfkcDiff = Math.abs(nfkcNormalized.length - input.length)
       modifications += nfkcDiff
       matchedPatterns.push('non_nfkc_form')
+    }
+
+    // Check for typoglycemia-scrambled attack keywords
+    const typoResult = deobfuscateTypoglycemia(input)
+    if (typoResult.corrections.length > 0) {
+      modifications += typoResult.corrections.length * 5 // High weight — deliberate evasion
+      matchedPatterns.push('typoglycemia_scramble')
     }
 
     const latencyMs = performance.now() - start
